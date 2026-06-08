@@ -7,6 +7,9 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js"
   },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "node-sqlite3-wasm": "^0.8.12",
