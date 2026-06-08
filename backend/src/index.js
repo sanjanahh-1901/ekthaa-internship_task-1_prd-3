@@ -31,6 +31,8 @@ app.use('/api/meetups',    require('./routes/meetups'));
 app.use('/api/meetups',    require('./routes/registrations'));
 app.use('/api/meetups',    require('./routes/analytics'));
 app.use('/api/networking', require('./routes/networking'));
+app.use('/api/communities', require('./routes/communities'));
+
 
 // ── Catch-all: serve frontend for unknown paths ────────────────────────────────
 app.get('*', (req, res) => {
@@ -42,7 +44,7 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`\n🚀 Meetup Hub running at  http://localhost:${PORT}`);
+  console.log(`\n🚀 Converge running at  http://localhost:${PORT}`);
   console.log(`📦 API available at        http://localhost:${PORT}/api`);
   console.log(`🔑 Admin login:            admin@meetup.com / admin123\n`);
 });

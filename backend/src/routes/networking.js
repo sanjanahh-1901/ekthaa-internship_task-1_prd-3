@@ -1,4 +1,5 @@
 const express = require('express');
+// GET /api/networking/suggestions  ← new, defined below
 const router  = express.Router();
 const db      = require('../db');
 const auth    = require('../middleware/auth');
@@ -69,6 +70,44 @@ router.get('/messages/:userId', auth, (req, res) => {
     ORDER BY m.sent_at ASC
   `).all(req.user.id, req.params.userId, req.params.userId, req.user.id);
   res.json(messages);
+});
+
+// ── GET /api/networking/suggestions ──────────────────────────────────────────
+// Returns up to 8 users ranked by shared profession / company, excluding
+// the caller and anyone already connected.
+router.get('/suggestions', auth, (req, res) => {
+  const me = db.prepare(
+    'SELECT profession, company FROM users WHERE id=?'
+  ).get(req.user.id);
+
+  const suggestions = db.prepare(`
+    SELECT u.id, u.name, u.profession, u.company,
+           u.profile_picture, u.looking_for,
+           CASE
+             WHEN u.profession = ? THEN 3
+             WHEN u.company    = ? THEN 2
+             ELSE 1
+           END AS relevance
+    FROM users u
+    WHERE u.id != ?
+      AND u.id NOT IN (
+            SELECT CASE
+                     WHEN requester_id = ? THEN receiver_id
+                     ELSE requester_id
+                   END
+            FROM connections
+            WHERE requester_id = ? OR receiver_id = ?
+          )
+    ORDER BY relevance DESC, u.created_at DESC
+    LIMIT 8
+  `).all(
+    me?.profession ?? null,
+    me?.company    ?? null,
+    req.user.id,
+    req.user.id, req.user.id, req.user.id
+  );
+
+  res.json(suggestions);
 });
 
 module.exports = router;

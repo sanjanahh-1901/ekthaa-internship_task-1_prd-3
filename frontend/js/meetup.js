@@ -40,7 +40,7 @@ function renderBanner() {
 /* ── Info ────────────────────────────────────────────────────────────────── */
 function renderInfo() {
   const m = meetupData;
-  document.title = `${m.title} – Meetup Hub`;
+  document.title = `${m.title} – Converge`;
   document.getElementById('m-title').textContent = m.title;
   document.getElementById('m-date').textContent  = fmtDate(m.date);
   document.getElementById('m-time').textContent  = `${fmtTime(m.start_time)} – ${fmtTime(m.end_time)}`;

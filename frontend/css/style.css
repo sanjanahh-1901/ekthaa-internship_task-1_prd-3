@@ -1,5 +1,5 @@
 /* ============================================================
-   Meetup Hub – Design System
+   Converge – Design System
    Dark Cosmic Theme · Inter · Glassmorphism
    ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -593,3 +593,287 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   .detail-title { font-size: 1.6rem; }
   .stats-grid  { grid-template-columns: 1fr 1fr; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   LIGHT THEME
+═══════════════════════════════════════════════════════════════ */
+:root[data-theme="light"] {
+  --bg:         #f0f0fa;
+  --bg2:        #e8e8f5;
+  --bg3:        #dcdcee;
+  --glass:      rgba(255,255,255,0.72);
+  --glass-hov:  rgba(255,255,255,0.92);
+  --border:     rgba(0,0,0,0.09);
+  --border-hov: rgba(139,92,246,0.45);
+  --txt:        #0f0f1e;
+  --txt2:       #374151;
+  --txt3:       #9ca3af;
+  --sh-md:      0 8px 32px rgba(139,92,246,.1);
+  --sh-lg:      0 20px 60px rgba(139,92,246,.14);
+}
+[data-theme="light"] body::before {
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 50%, rgba(139,92,246,.05) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 85% 20%, rgba(99,102,241,.04) 0%, transparent 70%);
+}
+[data-theme="light"] .navbar         { background: rgba(240,240,252,.88); }
+[data-theme="light"] .form-control   { background: rgba(0,0,0,.04); color: var(--txt); }
+[data-theme="light"] .form-control:focus { background: rgba(255,255,255,.9); }
+[data-theme="light"] .auth-card      { background: rgba(255,255,255,.82); }
+[data-theme="light"] .meetup-card    { background: rgba(255,255,255,.82); }
+[data-theme="light"] .modal          { background: #f0f0fa; }
+[data-theme="light"] .modal-header   { background: #f0f0fa; }
+[data-theme="light"] .spinner        { border-color: rgba(0,0,0,.15); border-top-color: var(--a1); }
+[data-theme="light"] thead th        { background: rgba(0,0,0,.03); }
+[data-theme="light"] tbody tr:hover td { background: rgba(0,0,0,.02); }
+[data-theme="light"] #chatbot-panel  { background: #f0f0fa; border-color: rgba(0,0,0,.1); }
+[data-theme="light"] #chatbot-messages { background: rgba(0,0,0,.04); }
+[data-theme="light"] #chatbot-inp    { background: rgba(255,255,255,.8); color: var(--txt); }
+[data-theme="light"] .cb-bot         { background: rgba(139,92,246,.08); border-color: rgba(139,92,246,.15); color: var(--txt); }
+[data-theme="light"] .toast-ok       { background: #d1fae5; color: #065f46; }
+[data-theme="light"] .toast-err      { background: #fee2e2; color: #991b1b; }
+[data-theme="light"] .toast-info     { background: #ede9fe; color: #5b21b6; }
+
+/* ══════════════════════════════════════════════════════════════
+   DASHBOARD FILTER TABS
+═══════════════════════════════════════════════════════════════ */
+.filter-bar {
+  display: flex; align-items: center;
+  justify-content: space-between; flex-wrap: wrap; gap: .75rem;
+  margin-bottom: 1.75rem;
+}
+.filter-tabs {
+  display: flex; gap: 3px;
+  background: var(--glass); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 4px;
+}
+.filter-tab {
+  padding: .42rem 1.1rem; border-radius: 10px;
+  font-size: .8rem; font-weight: 600; color: var(--txt2);
+  cursor: pointer; border: none; background: transparent;
+  transition: all .2s; white-space: nowrap; font-family: inherit;
+}
+.filter-tab.active {
+  background: var(--grad); color: #fff;
+  box-shadow: 0 2px 10px var(--glow);
+}
+.meetup-count-label { font-size: .8rem; color: var(--txt3); font-weight: 500; }
+.meetup-count-label strong { color: var(--txt2); }
+
+/* ══════════════════════════════════════════════════════════════
+   PEOPLE YOU MAY KNOW
+═══════════════════════════════════════════════════════════════ */
+.people-section { margin-bottom: 2rem; animation: fadeUp .45s ease both; }
+.people-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: .85rem;
+}
+.people-section-title {
+  font-size: .85rem; font-weight: 700; color: var(--txt2);
+  display: flex; align-items: center; gap: .4rem;
+}
+.people-scroll {
+  display: flex; gap: .85rem; overflow-x: auto; padding-bottom: .5rem;
+  scrollbar-width: thin;
+}
+.people-scroll::-webkit-scrollbar { height: 4px; }
+.person-card {
+  flex-shrink: 0; width: 165px;
+  background: var(--glass); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 1.1rem .9rem;
+  text-align: center; transition: all .25s;
+}
+.person-card:hover { border-color: rgba(139,92,246,.4); transform: translateY(-3px); }
+.person-av {
+  width: 50px; height: 50px; border-radius: 50%;
+  background: var(--grad); margin: 0 auto .7rem;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .9rem; font-weight: 700; overflow: hidden;
+}
+.person-av img  { width:100%;height:100%;object-fit:cover; }
+.person-name    { font-size:.82rem;font-weight:700;color:var(--txt);margin-bottom:.2rem;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.person-meta    { font-size:.68rem;color:var(--txt2);margin-bottom:.65rem;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+
+/* ══════════════════════════════════════════════════════════════
+   CHATBOT WIDGET
+═══════════════════════════════════════════════════════════════ */
+#chatbot-wrap { position:fixed; bottom:1.5rem; right:1.5rem; z-index:2500; }
+
+#chatbot-fab {
+  width:56px; height:56px; border-radius:50%;
+  background:var(--grad); border:none; cursor:pointer; font-size:1.5rem;
+  box-shadow:0 4px 20px var(--glow);
+  display:flex; align-items:center; justify-content:center;
+  position:relative; transition:transform .25s,box-shadow .25s;
+  animation:fabPop .4s cubic-bezier(.34,1.56,.64,1);
+}
+#chatbot-fab:hover { transform:scale(1.1); box-shadow:0 8px 30px var(--glow); }
+@keyframes fabPop { from{transform:scale(0);opacity:0;} to{transform:scale(1);opacity:1;} }
+
+#chatbot-badge {
+  position:absolute; top:-3px; right:-3px;
+  width:19px; height:19px; border-radius:50%;
+  background:var(--err); color:#fff; font-size:.65rem; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+  border:2px solid var(--bg);
+}
+
+#chatbot-panel {
+  position:absolute; bottom:68px; right:0; width:340px;
+  background:#0f0f1e; border:1px solid var(--border);
+  border-radius:18px; overflow:hidden; box-shadow:var(--sh-lg);
+  display:none; flex-direction:column;
+}
+#chatbot-panel.cb-open { display:flex; animation:cbUp .25s ease; }
+@keyframes cbUp { from{opacity:0;transform:translateY(14px);} to{opacity:1;transform:translateY(0);} }
+
+#chatbot-header {
+  padding:.8rem 1rem; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  background:rgba(139,92,246,.07); flex-shrink:0;
+}
+#chatbot-av {
+  width:36px; height:36px; border-radius:50%; background:var(--grad);
+  display:flex; align-items:center; justify-content:center; font-size:1.05rem;
+}
+
+#chatbot-messages {
+  height:270px; overflow-y:auto; padding:.75rem;
+  display:flex; flex-direction:column; gap:.55rem;
+  background:rgba(0,0,0,.22);
+}
+
+.cb-bot, .cb-user {
+  max-width:86%; padding:.55rem .85rem; border-radius:14px;
+  font-size:.8rem; line-height:1.6; word-break:break-word;
+}
+.cb-bot  { background:rgba(139,92,246,.1); border:1px solid rgba(139,92,246,.2);
+  color:var(--txt); align-self:flex-start; border-bottom-left-radius:4px; }
+.cb-user { background:var(--grad); color:#fff;
+  align-self:flex-end; border-bottom-right-radius:4px; }
+
+.cb-typing { display:flex; align-items:center; gap:5px; padding:.7rem .9rem; }
+.cb-typing span {
+  width:7px; height:7px; border-radius:50%;
+  background:rgba(139,92,246,.55); animation:cbBounce 1.1s infinite;
+}
+.cb-typing span:nth-child(2) { animation-delay:.16s; }
+.cb-typing span:nth-child(3) { animation-delay:.32s; }
+@keyframes cbBounce {
+  0%,60%,100%{transform:translateY(0);} 30%{transform:translateY(-7px);}
+}
+
+#chatbot-chips {
+  padding:.5rem .7rem; display:flex; gap:.35rem; flex-wrap:wrap;
+  border-top:1px solid rgba(255,255,255,.05); flex-shrink:0; background:rgba(0,0,0,.1);
+}
+#chatbot-chips button {
+  font-size:.68rem; padding:.28rem .65rem; border-radius:999px;
+  background:rgba(139,92,246,.1); border:1px solid rgba(139,92,246,.22);
+  color:var(--a1); cursor:pointer; transition:all .2s; font-family:inherit;
+}
+#chatbot-chips button:hover { background:rgba(139,92,246,.22); }
+
+#chatbot-footer {
+  display:flex; gap:.45rem; padding:.6rem .7rem;
+  border-top:1px solid var(--border); flex-shrink:0;
+}
+#chatbot-inp {
+  flex:1; padding:.5rem .8rem;
+  background:rgba(255,255,255,.06); border:1px solid var(--border);
+  border-radius:999px; color:var(--txt); font-size:.8rem;
+  font-family:inherit; outline:none; transition:border-color .2s;
+}
+#chatbot-inp:focus { border-color:var(--a1); }
+#chatbot-send {
+  width:36px; height:36px; border-radius:50%;
+  background:var(--grad); border:none; color:#fff; font-size:.9rem;
+  cursor:pointer; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; transition:transform .2s;
+}
+#chatbot-send:hover { transform:scale(1.12); }
+
+@media (max-width:600px) {
+  #chatbot-panel { width:calc(100vw - 2rem); }
+  #chatbot-wrap  { bottom:1rem; right:1rem; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   COMMUNITIES SECTION
+═══════════════════════════════════════════════════════════════ */
+.section-title-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1.1rem;
+}
+.section-title {
+  font-size: 1rem; font-weight: 800; letter-spacing: -.01em;
+  display: flex; align-items: center; gap: .45rem;
+}
+.section-sub { font-size: .78rem; color: var(--txt3); margin-top: .15rem; }
+
+/* Category filter strip */
+.cat-strip {
+  display: flex; gap: .4rem; overflow-x: auto;
+  padding-bottom: .4rem; margin-bottom: 1.2rem;
+  scrollbar-width: none;
+}
+.cat-strip::-webkit-scrollbar { display: none; }
+.cat-pill {
+  flex-shrink: 0; padding: .3rem .9rem;
+  border-radius: 999px; font-size: .72rem; font-weight: 700;
+  cursor: pointer; border: 1px solid var(--border);
+  background: var(--glass); color: var(--txt2);
+  transition: all .2s; white-space: nowrap; font-family: inherit;
+}
+.cat-pill.active {
+  background: var(--grad); border-color: transparent; color: #fff;
+  box-shadow: 0 2px 10px var(--glow);
+}
+
+/* Community cards grid */
+.community-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 1rem; margin-bottom: 2.5rem;
+}
+.community-card {
+  background: var(--glass); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 1.2rem;
+  transition: all .25s; display: flex; flex-direction: column; gap: .7rem;
+}
+.community-card:hover { border-color: rgba(139,92,246,.38); transform: translateY(-3px); box-shadow: var(--sh-md); }
+.community-card.joined { border-color: rgba(139,92,246,.35); background: rgba(139,92,246,.04); }
+
+.comm-top { display: flex; align-items: flex-start; gap: .85rem; }
+.comm-icon {
+  width: 46px; height: 46px; flex-shrink: 0;
+  background: rgba(139,92,246,.12); border: 1px solid rgba(139,92,246,.2);
+  border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+}
+.comm-info { flex: 1; min-width: 0; }
+.comm-name {
+  font-size: .9rem; font-weight: 700; color: var(--txt);
+  margin-bottom: .18rem; line-height: 1.3;
+}
+.comm-cat {
+  font-size: .65rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--a1);
+}
+.comm-desc {
+  font-size: .75rem; color: var(--txt2); line-height: 1.55;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.comm-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: .6rem; border-top: 1px solid var(--border);
+}
+.comm-members { font-size: .72rem; color: var(--txt3); display: flex; align-items: center; gap: .3rem; }
+
+[data-theme="light"] .community-card { background: rgba(255,255,255,.82); }
+[data-theme="light"] .community-card.joined { background: rgba(139,92,246,.04); }
+
+

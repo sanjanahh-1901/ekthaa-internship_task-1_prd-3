@@ -133,6 +133,25 @@ db.exec(`
     FOREIGN KEY (sender_id)   REFERENCES users(id),
     FOREIGN KEY (receiver_id) REFERENCES users(id)
   );
+
+  CREATE TABLE IF NOT EXISTS communities (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT NOT NULL UNIQUE,
+    description TEXT,
+    icon        TEXT DEFAULT '🌐',
+    category    TEXT DEFAULT 'General',
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS community_members (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id      INTEGER NOT NULL,
+    community_id INTEGER NOT NULL,
+    joined_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, community_id),
+    FOREIGN KEY (user_id)      REFERENCES users(id),
+    FOREIGN KEY (community_id) REFERENCES communities(id)
+  );
 `);
 
 /* ─── Seed admin user ────────────────────────────────────────────────────── */
@@ -145,5 +164,26 @@ if (!admin) {
   ).run('Admin User', 'admin@meetup.com', hash, 'admin', 'Community Manager', 'Meetup Hub');
   console.log('✅  Seeded admin: admin@meetup.com / admin123');
 }
+
+/* ─── Seed communities ───────────────────────────────────────────────────── */
+const SEED_COMMUNITIES = [
+  { name: 'AI & Machine Learning', description: 'Explore the frontier of artificial intelligence, deep learning, LLMs, and real-world ML applications.', icon: '🤖', category: 'Technology' },
+  { name: 'Web Development',       description: 'Frontend, backend, fullstack — share projects, frameworks, and modern web techniques.', icon: '🌐', category: 'Technology' },
+  { name: 'Mobile Development',    description: 'iOS, Android, Flutter, React Native — build the apps people love.', icon: '📱', category: 'Technology' },
+  { name: 'Cybersecurity',         description: 'Ethical hacking, threat intelligence, zero-trust, and keeping systems safe.', icon: '🔐', category: 'Technology' },
+  { name: 'Cloud & DevOps',        description: 'AWS, GCP, Azure, Kubernetes, CI/CD pipelines and the culture of DevOps.', icon: '☁️', category: 'Infrastructure' },
+  { name: 'UI/UX Design',          description: 'Human-centred design, Figma, accessibility, and crafting delightful experiences.', icon: '🎨', category: 'Design' },
+  { name: 'Data Science',          description: 'Statistics, analytics, visualisation, and turning raw data into decisions.', icon: '📊', category: 'Data' },
+  { name: 'Startup & Entrepreneurship', description: 'Founders, makers, investors — ideas, funding, scaling, and startup culture.', icon: '🚀', category: 'Business' },
+  { name: 'Open Source',           description: 'Contribute to open-source projects, find collaborators, and give back to the ecosystem.', icon: '🛠️', category: 'Community' },
+  { name: 'Women in Tech',         description: 'A supportive space celebrating and empowering women in technology and STEM fields.', icon: '💜', category: 'Community' },
+];
+for (const c of SEED_COMMUNITIES) {
+  const exists = db.prepare('SELECT id FROM communities WHERE name=?').get(c.name);
+  if (!exists) {
+    db.prepare('INSERT INTO communities (name,description,icon,category) VALUES (?,?,?,?)').run(c.name, c.description, c.icon, c.category);
+  }
+}
+console.log('✅  Communities seeded');
 
 module.exports = db;

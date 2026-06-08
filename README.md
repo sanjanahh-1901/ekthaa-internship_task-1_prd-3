@@ -1,4 +1,4 @@
-# 🎯 Meetup Hub — Meetup Management & Attendance System
+# 🎯 Converge — Meetup Management & Attendance System
 
 A full-stack web application for managing community meetups, registrations, check-ins, and attendee networking.
 
