@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Dashboard – Meetup Hub</title>
+  <meta name="description" content="Browse and discover upcoming community meetups.">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="navbar">
+    <a href="/dashboard.html" class="navbar-brand">
+      <div class="logo-icon">🎯</div>
+      <span class="grad-text">Meetup Hub</span>
+    </a>
+    <div class="navbar-right">
+      <!-- Admin only -->
+      <a href="/admin-create.html" class="btn btn-primary btn-sm admin-only" style="display:none">
+        ✨ Create Meetup
+      </a>
+      <div id="nav-user"></div>
+    </div>
+  </nav>
+
+  <!-- CONTENT -->
+  <div class="container">
+    <div class="page-header fade-up">
+      <h1 class="page-title">Upcoming Meetups</h1>
+      <p class="page-subtitle">Discover events, connect with professionals, grow your network.</p>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" style="text-align:center;padding:4rem 0">
+      <span class="spinner" style="width:36px;height:36px;border-width:3px"></span>
+      <p style="color:var(--txt3);margin-top:1rem;font-size:.9rem">Fetching meetups…</p>
+    </div>
+
+    <!-- Grid -->
+    <div class="meetup-grid" id="meetup-grid"></div>
+
+    <div style="padding:4rem 0"></div>
+  </div>
+
+  <div id="toast-wrap" class="toast-wrap"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

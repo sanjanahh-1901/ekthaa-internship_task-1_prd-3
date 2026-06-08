@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Meetup Detail – Meetup Hub</title>
+  <meta name="description" content="Meetup detail, registration, check-in and networking.">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="navbar">
+    <a href="/dashboard.html" class="navbar-brand">
+      <div class="logo-icon">🎯</div>
+      <span class="grad-text">Meetup Hub</span>
+    </a>
+    <div class="navbar-right">
+      <a href="/dashboard.html" class="btn btn-ghost btn-sm">← Back</a>
+      <div id="nav-user"></div>
+    </div>
+  </nav>
+
+  <!-- PAGE -->
+  <div class="container" style="padding-top:2rem;padding-bottom:4rem">
+
+    <!-- Banner -->
+    <div id="banner-wrap" class="fade-up"></div>
+
+    <!-- Admin bar -->
+    <div id="admin-bar" style="display:none;gap:.75rem;margin-bottom:1.5rem;flex-wrap:wrap" class="fade-up-1">
+      <a id="edit-btn" href="#" class="btn btn-ghost btn-sm">✏️ Edit Meetup</a>
+      <a id="analytics-btn" href="#" class="btn btn-ghost btn-sm">📊 Analytics</a>
+      <button class="btn btn-danger btn-sm" onclick="deleteMeetup()">🗑️ Delete</button>
+    </div>
+
+    <!-- Detail grid -->
+    <div class="detail-grid">
+
+      <!-- ── Left: Main content ── -->
+      <div>
+        <h1 class="detail-title fade-up" id="m-title">Loading…</h1>
+
+        <!-- Meta chips -->
+        <div class="meta-row fade-up-1">
+          <div class="meta-chip">
+            <div class="chip-icon">📅</div>
+            <div>
+              <div style="font-size:.65rem;color:var(--txt3);font-weight:700;text-transform:uppercase">Date</div>
+              <strong id="m-date"></strong>
+            </div>
+          </div>
+          <div class="meta-chip">
+            <div class="chip-icon">🕐</div>
+            <div>
+              <div style="font-size:.65rem;color:var(--txt3);font-weight:700;text-transform:uppercase">Time</div>
+              <strong id="m-time"></strong>
+            </div>
+          </div>
+          <div class="meta-chip">
+            <div class="chip-icon">📍</div>
+            <div>
+              <div style="font-size:.65rem;color:var(--txt3);font-weight:700;text-transform:uppercase">Venue</div>
+              <strong id="m-venue"></strong>
+            </div>
+          </div>
+          <div class="meta-chip">
+            <div class="chip-icon">👤</div>
+            <div>
+              <div style="font-size:.65rem;color:var(--txt3);font-weight:700;text-transform:uppercase">Organiser</div>
+              <strong id="m-org"></strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats row -->
+        <div style="display:flex;gap:1rem;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap" class="fade-up-2">
+          <span id="m-cap" style="font-size:.85rem;color:var(--txt2)"></span>
+          <span id="m-cin" style="font-size:.85rem;color:var(--ok)"></span>
+          <a id="m-map" href="#" target="_blank" class="btn btn-ghost btn-sm" style="display:none">🗺️ Open Maps</a>
+        </div>
+
+        <!-- Description -->
+        <div class="card fade-up-2" style="margin-bottom:1.5rem">
+          <div class="card-header"><span style="font-weight:700">About this Meetup</span></div>
+          <div class="card-body">
+            <p id="m-desc" style="color:var(--txt2);line-height:1.75;font-size:.93rem"></p>
+          </div>
+        </div>
+
+        <!-- Attendees -->
+        <div class="card fade-up-3">
+          <div class="card-header"><span style="font-weight:700">Attendees</span></div>
+          <div class="card-body">
+            <div class="sec-tabs">
+              <button class="sec-tab active" data-sec="registered" onclick="switchSection('registered')">
+                Registered &nbsp;<span id="reg-count" style="opacity:.6"></span>
+              </button>
+              <button class="sec-tab" data-sec="checked_in" onclick="switchSection('checked_in')">
+                Checked In &nbsp;<span id="cin-count" style="opacity:.6"></span>
+              </button>
+            </div>
+            <div id="att-list" class="attendee-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Right: Sidebar ── -->
+      <div>
+
+        <!-- Registration card -->
+        <div class="sidebar-card fade-up-1">
+          <div class="sidebar-header">Registration</div>
+          <div class="sidebar-body" id="reg-section">
+            <div style="text-align:center;padding:1rem"><span class="spinner"></span></div>
+          </div>
+        </div>
+
+        <!-- Check-in card (shown when meetup is live) -->
+        <div class="sidebar-card fade-up-2" id="checkin-section" style="display:none">
+          <div class="sidebar-header">
+            <span>🟢 Meetup is Live!</span>
+          </div>
+          <div class="sidebar-body">
+            <p style="font-size:.8rem;color:var(--txt2);margin-bottom:1rem">
+              The event has started. Mark your attendance now!
+            </p>
+            <button class="checkin-btn" onclick="doCheckin()" id="cin-btn">
+              ✅ Check In Now
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ REGISTER MODAL ═════════════════════════════════════ -->
+  <div class="modal-overlay" id="reg-modal" onclick="if(event.target===this)closeRegModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">🎟️ Register for Meetup</span>
+        <button class="modal-close" onclick="closeRegModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--txt2);font-size:.85rem;margin-bottom:1.25rem">
+          Tell us about yourself so the organiser can prepare better!
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="reg-why">Why do you want to attend? *</label>
+          <textarea class="form-control" id="reg-why" rows="3"
+                    placeholder="Share your motivation for joining this meetup…" required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reg-learn">What do you want to learn?</label>
+          <textarea class="form-control" id="reg-learn" rows="2"
+                    placeholder="Topics, skills, or insights you hope to gain…"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reg-contrib">What can you contribute?</label>
+          <textarea class="form-control" id="reg-contrib" rows="2"
+                    placeholder="Skills, experience, or ideas you can share…"></textarea>
+        </div>
+        <button class="btn btn-primary btn-full btn-lg" onclick="submitReg()" id="submit-reg">
+          Register Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PROFILE MODAL ════════════════════════════════════== -->
+  <div class="modal-overlay" id="profile-modal" onclick="if(event.target===this)closeProfile()">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Attendee Profile</span>
+        <button class="modal-close" onclick="closeProfile()">✕</button>
+      </div>
+      <div class="modal-body" id="profile-body"></div>
+    </div>
+  </div>
+
+  <!-- ═══ MESSAGE MODAL ════════════════════════════════════== -->
+  <div class="modal-overlay" id="msg-modal" onclick="if(event.target===this)closeMsg()">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title" id="msg-title">Send Message</span>
+        <button class="modal-close" onclick="closeMsg()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="msg-list" style="height:280px;overflow-y:auto;margin-bottom:1rem;padding:.5rem;
+             background:rgba(0,0,0,.25);border-radius:12px;border:1px solid var(--border)"></div>
+        <div style="display:flex;gap:.5rem">
+          <input type="text" id="msg-input" class="form-control" placeholder="Type a message…"
+                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
+                 style="flex:1">
+          <button class="btn btn-primary" onclick="sendMsg()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-wrap" class="toast-wrap"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/meetup.js"></script>
+</body>
+</html>
