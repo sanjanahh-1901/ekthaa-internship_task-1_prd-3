@@ -4,18 +4,9 @@
    Loaded after meetup.js; meetupId is already set.
    ============================================================ */
 
-/* ── Constants ──────────────────────────────────────────────── */
-const STICKERS = [
-  '🎉','🎊','🥳','🎈','🏆','⭐','🌟','✨','🔥','💫',
-  '👏','🤝','💪','🙌','❤️','💜','💙','💚','🧡','💛',
-  '📸','🎨','🚀','💡','🎤','🎵','🌈','🌺','🎯','😄',
-  '😎','🤩','🥰','😍','🙏','💐','🍾','🥂','🎁','🏅'
-];
-
 /* ── State ──────────────────────────────────────────────────── */
 let sbData         = null;   // { items, windowInfo, settings, isAdmin }
 let sbSelectedFile = null;   // File object from drop/pick
-let sbSelectedSticker = null;// Emoji string
 let sbCountdownTimer  = null;// setInterval handle
 
 /* ══════════════════════════════════════════════════════════════
@@ -71,9 +62,13 @@ function renderScrapbookBody() {
 
   /* ── Admin settings row ── */
   if (isAdmin) {
-    /* Pre-fill the datetime input with current close time (local ISO) */
-    const currentClose = sbData.settings?.upload_close_at
-      ? new Date(sbData.settings.upload_close_at).toISOString().slice(0, 16) : '';
+    /* Pre-fill the datetime input with current close time in local timezone ISO format */
+    let currentClose = '';
+    if (sbData.settings?.upload_close_at) {
+      const d = new Date(sbData.settings.upload_close_at);
+      const tzOffset = d.getTimezoneOffset() * 60000;
+      currentClose = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+    }
     html += `
       <div class="scrapbook-settings-row">
         <label>⏰ Upload window closes at:</label>
@@ -135,12 +130,6 @@ function renderScrapbookBody() {
         </div>
         <input type="file" id="sb-file-input" accept="image/*,image/gif,video/mp4,video/webm,video/quicktime" style="display:none" onchange="sbHandleFile(this.files[0])">
 
-        <!-- Sticker picker -->
-        <div class="scrapbook-sticker-label">Or pick a sticker</div>
-        <div class="scrapbook-sticker-grid" id="sb-sticker-grid">
-          ${STICKERS.map(s => `<button class="scrapbook-sticker-btn" onclick="sbPickSticker(this,'${s}')" title="${s}">${s}</button>`).join('')}
-        </div>
-
         <!-- Caption -->
         <div class="form-group" style="margin-bottom:.75rem">
           <input type="text" id="sb-caption" class="form-control" maxlength="300"
@@ -161,7 +150,7 @@ function renderScrapbookBody() {
       <div class="scrapbook-empty">
         <div class="scrapbook-empty-icon">🖼️</div>
         <div class="scrapbook-empty-title">No memories yet</div>
-        <div class="scrapbook-empty-sub">${open ? 'Be the first to add a photo or sticker!' : 'The upload window has closed.'}</div>
+        <div class="scrapbook-empty-sub">${open ? 'Be the first to add a photo or video!' : 'The upload window has closed.'}</div>
       </div>`;
   } else {
     html += `<div class="scrapbook-grid" id="sb-grid">` + visible.map(item => sbTileHTML(item, isAdmin)).join('') + `</div>`;
@@ -234,9 +223,6 @@ function sbHandleFile(file) {
   if (!file) return;
   if (file.size > 50 * 1024 * 1024) { toast('File too large (max 50 MB)', 'err'); return; }
   sbSelectedFile    = file;
-  sbSelectedSticker = null;
-  /* Deselect any sticker */
-  document.querySelectorAll('.scrapbook-sticker-btn.selected').forEach(b => b.classList.remove('selected'));
   const dz = document.getElementById('sb-drop-zone');
   if (dz) {
     dz.classList.add('has-file');
@@ -246,45 +232,24 @@ function sbHandleFile(file) {
   }
 }
 
-function sbPickSticker(btn, emoji) {
-  sbSelectedSticker = emoji;
-  sbSelectedFile    = null;
-  /* Reset drop zone */
-  const dz = document.getElementById('sb-drop-zone');
-  if (dz) { dz.classList.remove('has-file'); }
-  const fn = document.getElementById('sb-filename');
-  if (fn) fn.textContent = '';
-  /* Toggle selected state */
-  document.querySelectorAll('.scrapbook-sticker-btn.selected').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-}
-
 async function submitScrapbookUpload() {
-  if (!sbSelectedFile && !sbSelectedSticker) {
-    toast('Please pick a photo, GIF, video, or sticker first.', 'err'); return;
+  if (!sbSelectedFile) {
+    toast('Please pick a photo, GIF, or video first.', 'err'); return;
   }
   const btn     = document.getElementById('sb-upload-btn');
   const caption = document.getElementById('sb-caption')?.value.trim() || '';
   setBtn(btn, true);
 
   try {
-    if (sbSelectedSticker) {
-      /* Sticker — stored as emoji in file_path (no actual file) */
-      await apiFetch(`/scrapbook/${meetupId}/upload`, {
-        method: 'POST',
-        body: JSON.stringify({ sticker_emoji: sbSelectedSticker, caption, media_type: 'sticker' })
-      });
-    } else {
-      const fd = new FormData();
-      fd.append('file', sbSelectedFile);
-      fd.append('caption', caption);
-      const mt = sbSelectedFile.type.startsWith('video/') ? 'video'
-               : sbSelectedFile.type === 'image/gif'      ? 'gif' : 'photo';
-      fd.append('media_type', mt);
-      await apiFetch(`/scrapbook/${meetupId}/upload`, { method: 'POST', body: fd });
-    }
+    const fd = new FormData();
+    fd.append('file', sbSelectedFile);
+    fd.append('caption', caption);
+    const mt = sbSelectedFile.type.startsWith('video/') ? 'video'
+             : sbSelectedFile.type === 'image/gif'      ? 'gif' : 'photo';
+    fd.append('media_type', mt);
+    await apiFetch(`/scrapbook/${meetupId}/upload`, { method: 'POST', body: fd });
     toast('✨ Added to the scrapbook!', 'ok');
-    sbSelectedFile = sbSelectedSticker = null;
+    sbSelectedFile = null;
     await loadScrapbook();
   } catch (err) {
     toast(err.message, 'err');

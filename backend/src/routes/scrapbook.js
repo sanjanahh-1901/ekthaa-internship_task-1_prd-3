@@ -85,11 +85,7 @@ router.get('/:meetupId', auth, (req, res) => {
    Auth + checked-in attendee only + window must be open.
    Accepts multipart/form-data: file, caption (opt), media_type (opt).
 ═══════════════════════════════════════════════════════════════════════════ */
-router.post('/:meetupId/upload', auth, (req, res, next) => {
-  /* Sticker uploads are JSON (no file) — skip multer for them */
-  if (req.headers['content-type']?.includes('application/json')) return next();
-  upload.single('file')(req, res, next);
-}, (req, res) => {
+router.post('/:meetupId/upload', auth, upload.single('file'), (req, res) => {
   const meetup = db.prepare('SELECT * FROM meetups WHERE id=?').get(req.params.meetupId);
   if (!meetup) return res.status(404).json({ error: 'Meetup not found' });
 
@@ -114,20 +110,6 @@ router.post('/:meetupId/upload', auth, (req, res, next) => {
 
   const caption   = (req.body.caption || '').trim().slice(0, 300) || null;
   const mediaType = req.body.media_type || 'photo';
-
-  /* ── Sticker (emoji stored directly in file_path) ── */
-  if (mediaType === 'sticker') {
-    const emoji = (req.body.sticker_emoji || '').trim();
-    if (!emoji) return res.status(400).json({ error: 'No sticker emoji provided.' });
-    const result = db.prepare(
-      `INSERT INTO scrapbook_items (meetup_id, uploader_id, file_path, media_type, caption)
-       VALUES (?,?,?,?,?)`
-    ).run(req.params.meetupId, req.user.id, emoji, 'sticker', caption);
-    return res.status(201).json(db.prepare(`
-      SELECT s.*, u.name AS uploader_name, u.profile_picture AS uploader_pic
-      FROM scrapbook_items s JOIN users u ON s.uploader_id=u.id WHERE s.id=?
-    `).get(result.lastInsertRowid));
-  }
 
   /* ── File upload (photo / gif) ── */
   if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
