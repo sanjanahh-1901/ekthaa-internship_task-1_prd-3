@@ -31,8 +31,33 @@
       <p class="page-subtitle">Discover meetups, explore communities, and grow your network.</p>
     </div>
 
+    <!-- ── Filter bar ────────────────────────────────────────────────────── -->
+    <div class="section-title-row fade-up-1">
+      <div>
+        <div class="section-title">📅 Meetups</div>
+      </div>
+    </div>
+    <div class="filter-bar fade-up-1">
+      <div class="filter-tabs" id="filter-tabs">
+        <button class="filter-tab active" data-filter="all"      onclick="setFilter('all')">🌐 All</button>
+        <button class="filter-tab"        data-filter="upcoming" onclick="setFilter('upcoming')">📅 Upcoming</button>
+        <button class="filter-tab"        data-filter="today"    onclick="setFilter('today')">🔥 Today</button>
+        <button class="filter-tab"        data-filter="past"     onclick="setFilter('past')">🕐 Past</button>
+      </div>
+      <span class="meetup-count-label" id="count-label"></span>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" style="text-align:center;padding:4rem 0">
+      <span class="spinner" style="width:36px;height:36px;border-width:3px"></span>
+      <p style="color:var(--txt3);margin-top:1rem;font-size:.9rem">Fetching meetups…</p>
+    </div>
+
+    <!-- Meetup grid -->
+    <div class="meetup-grid" id="meetup-grid"></div>
+
     <!-- ── Communities ─────────────────────────────────────────────────────── -->
-    <section id="communities-section" class="fade-up-1">
+    <section id="communities-section" class="fade-up-2" style="margin-top:3rem">
       <div class="section-title-row">
         <div>
           <div class="section-title">🏘️ Communities</div>
@@ -61,31 +86,6 @@
         </div>
       </div>
     </section>
-
-    <!-- ── Filter bar ────────────────────────────────────────────────────── -->
-    <div class="section-title-row fade-up-2">
-      <div>
-        <div class="section-title">📅 Meetups</div>
-      </div>
-    </div>
-    <div class="filter-bar fade-up-2">
-      <div class="filter-tabs" id="filter-tabs">
-        <button class="filter-tab active" data-filter="all"      onclick="setFilter('all')">🌐 All</button>
-        <button class="filter-tab"        data-filter="upcoming" onclick="setFilter('upcoming')">📅 Upcoming</button>
-        <button class="filter-tab"        data-filter="today"    onclick="setFilter('today')">🔥 Today</button>
-        <button class="filter-tab"        data-filter="past"     onclick="setFilter('past')">🕐 Past</button>
-      </div>
-      <span class="meetup-count-label" id="count-label"></span>
-    </div>
-
-    <!-- Loading -->
-    <div id="loading" style="text-align:center;padding:4rem 0">
-      <span class="spinner" style="width:36px;height:36px;border-width:3px"></span>
-      <p style="color:var(--txt3);margin-top:1rem;font-size:.9rem">Fetching meetups…</p>
-    </div>
-
-    <!-- Meetup grid -->
-    <div class="meetup-grid" id="meetup-grid"></div>
 
     <!-- ── People You May Know (bottom) ────────────────────────────────── -->
     <section class="people-section fade-up" id="suggestions-section"

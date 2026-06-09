@@ -88,6 +88,19 @@
           </div>
         </div>
 
+        <!-- ── Scrapbook ── -->
+        <div class="card scrapbook-section fade-up-3" id="scrapbook-card">
+          <div class="card-header">
+            <div class="scrapbook-header" style="width:100%;margin-bottom:0">
+              <span class="scrapbook-title">📸 Event Scrapbook</span>
+              <span id="scrapbook-window-badge" class="scrapbook-window-badge"></span>
+            </div>
+          </div>
+          <div class="card-body" id="scrapbook-body">
+            <div style="text-align:center;padding:1.5rem"><span class="spinner"></span></div>
+          </div>
+        </div>
+
         <!-- Attendees -->
         <div class="card fade-up-3">
           <div class="card-header"><span style="font-weight:700">Attendees</span></div>
@@ -200,8 +213,20 @@
   </div>
 
   <div id="toast-wrap" class="toast-wrap"></div>
+
+  <div id="scrapbook-preview-overlay" onclick="if(event.target===this)closeScrapbookPreview()">
+    <button id="scrapbook-preview-close" onclick="closeScrapbookPreview()">✕</button>
+    <div id="scrapbook-preview-inner">
+      <img id="scrapbook-preview-img" src="" alt="" style="display:none">
+      <video id="scrapbook-preview-video" style="display:none;max-width:90vw;max-height:78vh;border-radius:var(--r-lg);box-shadow:var(--sh-lg)" controls playsinline></video>
+      <div id="scrapbook-preview-sticker" style="display:none"></div>
+      <div id="scrapbook-preview-caption"></div>
+      <div id="scrapbook-preview-meta"></div>
+    </div>
+  </div>
   <script src="/js/api.js"></script>
   <script src="/js/components.js"></script>
   <script src="/js/meetup.js"></script>
+  <script src="/js/scrapbook.js"></script>
 </body>
 </html>

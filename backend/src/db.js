@@ -152,7 +152,33 @@ db.exec(`
     FOREIGN KEY (user_id)      REFERENCES users(id),
     FOREIGN KEY (community_id) REFERENCES communities(id)
   );
+
+  CREATE TABLE IF NOT EXISTS scrapbook_settings (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    meetup_id        INTEGER NOT NULL UNIQUE,
+    upload_close_at  TEXT,
+    enabled          INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (meetup_id) REFERENCES meetups(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS scrapbook_items (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    meetup_id    INTEGER NOT NULL,
+    uploader_id  INTEGER NOT NULL,
+    file_path    TEXT NOT NULL,
+    media_type   TEXT NOT NULL DEFAULT 'photo',
+    caption      TEXT,
+    status       TEXT NOT NULL DEFAULT 'pending',
+    uploaded_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (meetup_id)   REFERENCES meetups(id),
+    FOREIGN KEY (uploader_id) REFERENCES users(id)
+  );
 `);
+
+/* ─── Live migration: add upload_close_at if upgrading from old schema ─── */
+try { db.exec('ALTER TABLE scrapbook_settings ADD COLUMN upload_close_at TEXT'); } catch {}
+/* Remove legacy column if present (SQLite ≥3.35 only, safe no-op otherwise) */
+try { db.exec('ALTER TABLE scrapbook_settings DROP COLUMN upload_window_hours'); } catch {}
 
 /* ─── Seed admin user ────────────────────────────────────────────────────── */
 const admin = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@meetup.com');

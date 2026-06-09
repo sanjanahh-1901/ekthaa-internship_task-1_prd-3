@@ -5,7 +5,7 @@ const path    = require('path');
 const fs      = require('fs');
 
 // ── Ensure upload directories exist ───────────────────────────────────────────
-['uploads/banners', 'uploads/profiles'].forEach(dir => {
+['uploads/banners', 'uploads/profiles', 'uploads/scrapbook'].forEach(dir => {
   fs.mkdirSync(path.join(__dirname, '../../', dir), { recursive: true });
 });
 
@@ -32,6 +32,7 @@ app.use('/api/meetups',    require('./routes/registrations'));
 app.use('/api/meetups',    require('./routes/analytics'));
 app.use('/api/networking', require('./routes/networking'));
 app.use('/api/communities', require('./routes/communities'));
+app.use('/api/scrapbook',   require('./routes/scrapbook'));
 
 
 // ── Catch-all: serve frontend for unknown paths ────────────────────────────────

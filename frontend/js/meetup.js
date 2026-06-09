@@ -26,6 +26,7 @@ async function reload() {
     renderCheckinSection();
     renderAttendees();
     if (AppState.isAdmin()) document.getElementById('admin-bar').style.display = 'flex';
+    if (typeof loadScrapbook === 'function') loadScrapbook();
   } catch (err) { toast(err.message, 'err'); }
 }
 
