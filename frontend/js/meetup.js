@@ -68,9 +68,12 @@ function renderRegSection() {
       <div class="reg-success">
         <div style="font-size:1.8rem">✅</div>
         <div style="color:var(--ok);font-weight:700;margin:.3rem 0">You're registered!</div>
-        <span class="badge ${reg.status === 'checked_in' ? 'badge-green' : 'badge-purple'}">
+        <span class="badge ${reg.status === 'checked_in' ? 'badge-green' : 'badge-purple'}" style="margin-bottom: 0.75rem;">
           ${reg.status === 'checked_in' ? 'Checked In' : 'Registered'}
         </span>
+        <button class="btn btn-ghost btn-sm btn-full" style="margin-top:.75rem;font-size:.78rem;font-weight:600" onclick="openTicketModal()">
+          🎟️ View Digital Pass
+        </button>
       </div>`;
     return;
   }
@@ -256,4 +259,205 @@ async function deleteMeetup() {
     toast('Meetup deleted', 'info');
     setTimeout(() => window.location.href = '/dashboard.html', 1200);
   } catch (err) { toast(err.message, 'err'); }
+}
+
+/* ── Digital Pass Modal ─────────────────────────────────────────────────── */
+function openTicketModal() {
+  const me = AppState.getUser();
+  if (!me) return;
+  
+  document.getElementById('ticket-user-name').textContent = me.name;
+  document.getElementById('ticket-user-profession').textContent = 
+    [me.profession, me.company].filter(Boolean).join(' @ ') || 'Community Member';
+  
+  // Payload for unique user pass
+  const payload = JSON.stringify({
+    userId: me.id,
+    name: me.name,
+    type: 'converge-user-pass'
+  });
+  
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payload)}`;
+  document.getElementById('ticket-qr').src = qrUrl;
+  
+  document.getElementById('ticket-modal').classList.add('active');
+}
+
+function closeTicketModal() {
+  document.getElementById('ticket-modal').classList.remove('active');
+}
+
+/* ── Admin QR Scanner ───────────────────────────────────────────────────── */
+let html5QrScanner = null;
+let scannerActive = false;
+
+// Web Audio API Sound Synthesizer
+function playCheckinSound(type) {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    if (type === 'success') {
+      // Play a happy double chime: D5 then A5
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+      osc.frequency.setValueAtTime(880.00, audioCtx.currentTime + 0.08); // A5
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + 0.35);
+    } else {
+      // Play a low buzzer sound
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(130.81, audioCtx.currentTime); // C3
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + 0.45);
+    }
+  } catch (err) {
+    console.error('Failed to play check-in feedback sound:', err);
+  }
+}
+
+async function openScanner() {
+  if (scannerActive) return;
+  
+  const scannerModal = document.getElementById('scanner-modal');
+  const cameraSelect = document.getElementById('camera-select');
+  const feedback = document.getElementById('scanner-feedback');
+  
+  scannerModal.classList.add('active');
+  feedback.classList.remove('active', 'success', 'error');
+  cameraSelect.innerHTML = '<option value="">Loading cameras...</option>';
+  
+  try {
+    // Request permissions and list cameras
+    const devices = await Html5Qrcode.getCameras();
+    if (!devices || devices.length === 0) {
+      throw new Error('No cameras found on this device');
+    }
+    
+    cameraSelect.innerHTML = devices.map(d => 
+      `<option value="${d.id}">${esc(d.label || 'Camera ' + d.id)}</option>`
+    ).join('');
+    
+    html5QrScanner = new Html5Qrcode("qr-reader");
+    
+    const startScanning = async (deviceId) => {
+      try {
+        await html5QrScanner.start(
+          deviceId,
+          {
+            fps: 10,
+            qrbox: { width: 220, height: 220 }
+          },
+          onQrScanSuccess,
+          onQrScanFailure
+        );
+        scannerActive = true;
+      } catch (err) {
+        toast('Camera start failed: ' + err.message, 'err');
+      }
+    };
+    
+    // Start with the first camera
+    await startScanning(devices[0].id);
+    
+    // Handle camera change
+    cameraSelect.onchange = async () => {
+      if (html5QrScanner && html5QrScanner.isScanning) {
+        await html5QrScanner.stop();
+      }
+      await startScanning(cameraSelect.value);
+    };
+    
+  } catch (err) {
+    toast(err.message, 'err');
+    closeScanner();
+  }
+}
+
+async function closeScanner() {
+  const scannerModal = document.getElementById('scanner-modal');
+  scannerModal.classList.remove('active');
+  
+  if (html5QrScanner) {
+    try {
+      if (html5QrScanner.isScanning) {
+        await html5QrScanner.stop();
+      }
+    } catch (err) {
+      console.error('Error stopping scanner:', err);
+    }
+    html5QrScanner = null;
+  }
+  scannerActive = false;
+}
+
+let lastScanTime = 0;
+async function onQrScanSuccess(decodedText) {
+  const now = Date.now();
+  // Prevent duplicate scanning in rapid succession (debounce 2.5 seconds)
+  if (now - lastScanTime < 2500) return;
+  lastScanTime = now;
+  
+  const feedback = document.getElementById('scanner-feedback');
+  feedback.classList.remove('success', 'error');
+  feedback.className = 'scanner-feedback-overlay active';
+  feedback.querySelector('.feedback-message').textContent = 'Validating pass...';
+  
+  try {
+    const data = JSON.parse(decodedText);
+    if (data.type !== 'converge-user-pass' || !data.userId) {
+      throw new Error('Invalid Digital Pass format');
+    }
+    
+    // Call admin-checkin endpoint
+    const res = await apiFetch(`/meetups/${meetupId}/admin-checkin`, {
+      method: 'POST',
+      body: JSON.stringify({ userId: data.userId })
+    });
+    
+    // Play success chime
+    playCheckinSound('success');
+    
+    // Show success overlay
+    feedback.className = 'scanner-feedback-overlay active success';
+    feedback.querySelector('.feedback-message').innerHTML = `
+      <div style="font-size: 1.5rem; margin-bottom: 0.2rem;">✅ Checked In</div>
+      <strong style="color:#fff">${esc(res.attendee?.name || 'Attendee')}</strong>
+    `;
+    toast(res.message, 'ok');
+    
+    // Dynamic background data reload
+    await reload();
+    
+  } catch (err) {
+    // Play buzzer sound
+    playCheckinSound('error');
+    
+    // Show error overlay
+    feedback.className = 'scanner-feedback-overlay active error';
+    feedback.querySelector('.feedback-message').innerHTML = `
+      <div style="font-size: 1.5rem; margin-bottom: 0.2rem;">❌ Failed</div>
+      <span style="font-size: 0.85rem;">${esc(err.message)}</span>
+    `;
+    toast(err.message, 'err');
+  }
+  
+  // Clear feedback after 2 seconds to allow next scan
+  setTimeout(() => {
+    if (scannerActive) {
+      feedback.classList.remove('active', 'success', 'error');
+    }
+  }, 2000);
+}
+
+function onQrScanFailure(error) {
+  // Silent failure for normal qr scanning ticks (no QR code in frame)
 }

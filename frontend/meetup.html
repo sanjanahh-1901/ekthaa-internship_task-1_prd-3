@@ -31,6 +31,7 @@
     <div id="admin-bar" style="display:none;gap:.75rem;margin-bottom:1.5rem;flex-wrap:wrap" class="fade-up-1">
       <a id="edit-btn" href="#" class="btn btn-ghost btn-sm">✏️ Edit Meetup</a>
       <a id="analytics-btn" href="#" class="btn btn-ghost btn-sm">📊 Analytics</a>
+      <button class="btn btn-ghost btn-sm" onclick="openScanner()">📷 Scan QR Code</button>
       <button class="btn btn-danger btn-sm" onclick="deleteMeetup()">🗑️ Delete</button>
     </div>
 
@@ -224,6 +225,92 @@
       <div id="scrapbook-preview-meta"></div>
     </div>
   </div>
+
+  <!-- ═══ DIGITAL PASS MODAL ══════════════════════════════════ -->
+  <div class="modal-overlay" id="ticket-modal" onclick="if(event.target===this)closeTicketModal()">
+    <div class="modal modal-ticket-wrap" style="max-width: 420px;">
+      <div class="modal-header" style="border-bottom: none;">
+        <span class="modal-title">🎟️ Digital Member Pass</span>
+        <button class="modal-close" onclick="closeTicketModal()">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 0 1.5rem 2rem;">
+        <div class="ticket-card">
+          <div class="ticket-top">
+            <div class="ticket-brand">
+              <span class="grad-text" style="font-weight: 800; letter-spacing: 0.1em; font-size: 1.1rem;">CONVERGE</span>
+              <span class="ticket-badge-tag">Digital Pass</span>
+            </div>
+            <div class="ticket-user-info">
+              <h2 id="ticket-user-name" class="ticket-name">Attendee Name</h2>
+              <p id="ticket-user-profession" class="ticket-meta">Profession</p>
+            </div>
+          </div>
+          
+          <div class="ticket-divider">
+            <span class="ticket-notch left"></span>
+            <span class="ticket-notch right"></span>
+          </div>
+          
+          <div class="ticket-bottom">
+            <div class="ticket-qr-container">
+              <img id="ticket-qr" src="" alt="Digital Pass QR Code" class="ticket-qr-img">
+              <div class="ticket-scan-hint">Scan at the event entrance to check in</div>
+            </div>
+            <div class="ticket-barcode">
+              <div class="barcode-line" style="width: 5%"></div>
+              <div class="barcode-line" style="width: 2%"></div>
+              <div class="barcode-line" style="width: 8%"></div>
+              <div class="barcode-line" style="width: 4%"></div>
+              <div class="barcode-line" style="width: 1%"></div>
+              <div class="barcode-line" style="width: 6%"></div>
+              <div class="barcode-line" style="width: 3%"></div>
+              <div class="barcode-line" style="width: 7%"></div>
+              <div class="barcode-line" style="width: 2%"></div>
+              <div class="barcode-line" style="width: 9%"></div>
+              <div class="barcode-line" style="width: 4%"></div>
+              <div class="barcode-line" style="width: 1%"></div>
+              <div class="barcode-line" style="width: 5%"></div>
+              <div class="barcode-line" style="width: 8%"></div>
+              <div class="barcode-line" style="width: 2%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SCANNER MODAL ══════════════════════════════════════ -->
+  <div class="modal-overlay" id="scanner-modal" onclick="if(event.target===this)closeScanner()">
+    <div class="modal" style="max-width: 460px;">
+      <div class="modal-header">
+        <span class="modal-title">📷 Scan Attendee QR Code</span>
+        <button class="modal-close" onclick="closeScanner()">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem; position: relative;">
+        <p style="color:var(--txt2);font-size:.85rem;margin-bottom:1.25rem">
+          Hold an attendee's Digital Pass QR code in front of the camera to check them in.
+        </p>
+        
+        <div class="scanner-container">
+          <div id="qr-reader" style="width: 100%; overflow: hidden; border-radius: var(--r-md); background: #000; border: 1px solid var(--border);"></div>
+          <div class="scanner-laser"></div>
+          
+          <!-- Scanner feedback overlay -->
+          <div id="scanner-feedback" class="scanner-feedback-overlay">
+            <div class="feedback-icon"></div>
+            <div class="feedback-message">Checking in...</div>
+          </div>
+        </div>
+        
+        <div class="form-group" style="margin-top: 1.25rem; margin-bottom: 0;">
+          <label class="form-label" for="camera-select">Select Camera</label>
+          <select id="camera-select" class="form-control" style="background: rgba(255,255,255,.05); border-radius: var(--r-md);"></select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="/js/api.js"></script>
   <script src="/js/components.js"></script>
   <script src="/js/meetup.js"></script>

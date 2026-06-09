@@ -66,6 +66,40 @@ router.post('/:id/checkin', auth, (req, res) => {
   res.json({ message: 'Checked in successfully! Welcome! 🎊' });
 });
 
+// ── POST /api/meetups/:id/admin-checkin (admin) ──────────────────────────────────
+router.post('/:id/admin-checkin', auth, adminOnly, (req, res) => {
+  const meetupId = req.params.id;
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: 'User ID is required' });
+
+  const meetup = db.prepare('SELECT * FROM meetups WHERE id=?').get(meetupId);
+  if (!meetup) return res.status(404).json({ error: 'Meetup not found' });
+
+  const attendee = db.prepare('SELECT * FROM users WHERE id=?').get(userId);
+  if (!attendee) return res.status(404).json({ error: 'User not found' });
+
+  const reg = db.prepare('SELECT * FROM registrations WHERE user_id=? AND meetup_id=?').get(userId, meetupId);
+  if (!reg) {
+    return res.status(400).json({ error: `User is not registered for this meetup` });
+  }
+  if (reg.status === 'checked_in') {
+    return res.status(400).json({ error: `${attendee.name} is already checked in` });
+  }
+
+  const now = new Date();
+  db.prepare("UPDATE registrations SET status='checked_in', checkin_time=? WHERE user_id=? AND meetup_id=?")
+    .run(now.toISOString(), userId, meetupId);
+
+  res.json({
+    message: `Successfully checked in ${attendee.name}! 🎊`,
+    attendee: {
+      id: attendee.id,
+      name: attendee.name,
+      email: attendee.email
+    }
+  });
+});
+
 // ── GET /api/meetups/:id/attendees ────────────────────────────────────────────
 router.get('/:id/attendees', (req, res) => {
   const attendees = db.prepare(`
