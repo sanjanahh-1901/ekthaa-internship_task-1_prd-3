@@ -5,6 +5,10 @@ services:
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
+    disk:
+      name: converge-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
@@ -12,3 +16,5 @@ services:
         value: 3000
       - key: JWT_SECRET
         generateValue: true
+      - key: DATA_DIR
+        value: /var/data
