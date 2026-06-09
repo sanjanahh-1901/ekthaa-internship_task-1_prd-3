@@ -5,8 +5,12 @@ const path    = require('path');
 const fs      = require('fs');
 
 // ── Ensure upload directories exist ───────────────────────────────────────────
-['uploads/banners', 'uploads/profiles', 'uploads/scrapbook'].forEach(dir => {
-  fs.mkdirSync(path.join(__dirname, '../../', dir), { recursive: true });
+const UPLOADS_DIR = process.env.DATA_DIR
+  ? path.join(process.env.DATA_DIR, 'uploads')
+  : path.join(__dirname, '../../uploads');
+
+['banners', 'profiles', 'scrapbook'].forEach(sub => {
+  fs.mkdirSync(path.join(UPLOADS_DIR, sub), { recursive: true });
 });
 
 // ── Initialize DB (runs migrations + seed) ────────────────────────────────────
@@ -21,7 +25,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ── Static assets ──────────────────────────────────────────────────────────────
-app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+app.use('/uploads', express.static(UPLOADS_DIR));
 app.use(express.static(path.join(__dirname, '../../frontend')));
 
 // ── API Routes ─────────────────────────────────────────────────────────────────

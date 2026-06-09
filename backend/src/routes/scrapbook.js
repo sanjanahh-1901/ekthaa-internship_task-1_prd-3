@@ -8,9 +8,13 @@ const auth      = require('../middleware/auth');
 const adminOnly = require('../middleware/adminOnly');
 
 /* ─── Multer storage ─────────────────────────────────────────────────────── */
+const UPLOADS_DIR = process.env.DATA_DIR
+  ? path.join(process.env.DATA_DIR, 'uploads')
+  : path.join(__dirname, '../../../uploads');
+
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) =>
-    cb(null, path.join(__dirname, '../../../uploads/scrapbook')),
+    cb(null, path.join(UPLOADS_DIR, 'scrapbook')),
   filename: (_req, file, cb) =>
     cb(null, `scrapbook_${Date.now()}_${Math.random().toString(36).slice(2,8)}${path.extname(file.originalname)}`)
 });

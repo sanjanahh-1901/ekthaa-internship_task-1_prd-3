@@ -13,7 +13,9 @@ const { Database } = require('node-sqlite3-wasm');
 const path         = require('path');
 const bcrypt       = require('bcryptjs');
 
-const DB_PATH = path.join(__dirname, '../../meetup.db');
+const DB_PATH = process.env.DATA_DIR
+  ? path.join(process.env.DATA_DIR, 'meetup.db')
+  : path.join(__dirname, '../../meetup.db');
 const raw     = new Database(DB_PATH);
 
 /* WAL mode + FK enforcement */

@@ -6,9 +6,13 @@ const db        = require('../db');
 const auth      = require('../middleware/auth');
 const adminOnly = require('../middleware/adminOnly');
 
+const UPLOADS_DIR = process.env.DATA_DIR
+  ? path.join(process.env.DATA_DIR, 'uploads')
+  : path.join(__dirname, '../../../uploads');
+
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) =>
-    cb(null, path.join(__dirname, '../../../uploads/banners')),
+    cb(null, path.join(UPLOADS_DIR, 'banners')),
   filename: (_req, file, cb) =>
     cb(null, `banner_${Date.now()}${path.extname(file.originalname)}`)
 });

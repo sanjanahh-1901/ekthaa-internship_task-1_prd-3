@@ -5,9 +5,13 @@ const multer  = require('multer');
 const db      = require('../db');
 const auth    = require('../middleware/auth');
 
+const UPLOADS_DIR = process.env.DATA_DIR
+  ? path.join(process.env.DATA_DIR, 'uploads')
+  : path.join(__dirname, '../../../uploads');
+
 const storage = multer.diskStorage({
   destination: (req, _file, cb) =>
-    cb(null, path.join(__dirname, '../../../uploads/profiles')),
+    cb(null, path.join(UPLOADS_DIR, 'profiles')),
   filename: (req, file, cb) =>
     cb(null, `user_${req.user.id}_${Date.now()}${path.extname(file.originalname)}`)
 });
