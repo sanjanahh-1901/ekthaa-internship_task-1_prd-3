@@ -111,6 +111,8 @@ router.delete('/:id', auth, adminOnly, (req, res) => {
     return res.status(404).json({ error: 'Meetup not found' });
   }
   db.prepare('DELETE FROM registrations WHERE meetup_id=?').run(req.params.id);
+  db.prepare('DELETE FROM scrapbook_settings WHERE meetup_id=?').run(req.params.id);
+  db.prepare('DELETE FROM scrapbook_items WHERE meetup_id=?').run(req.params.id);
   db.prepare('DELETE FROM meetups WHERE id=?').run(req.params.id);
   res.json({ message: 'Meetup deleted successfully' });
 });
