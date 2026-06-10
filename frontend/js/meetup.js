@@ -1051,6 +1051,19 @@ function shareSocial(platform) {
     shareUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
   } else if (platform === 'linkedin') {
     shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+  } else if (platform === 'facebook') {
+    shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+  } else if (platform === 'snapchat') {
+    shareUrl = `https://www.snapchat.com/share?url=${url}`;
+  } else if (platform === 'instagram') {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      toast('📸 Link copied! Open Instagram to share it in your story, bio, or DMs.', 'ok');
+      window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
+    }).catch(() => {
+      toast('Open Instagram to share: ' + window.location.href, 'info');
+      window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
+    });
+    return;
   }
   
   if (shareUrl) {
