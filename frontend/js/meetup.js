@@ -1007,3 +1007,53 @@ async function onQrScanSuccess(decodedText) {
 function onQrScanFailure(error) {
   // Silent failure for normal qr scanning ticks (no QR code in frame)
 }
+
+/* ── Share Meetup ───────────────────────────────────────────────────────── */
+function openShareModal() {
+  const input = document.getElementById('share-url-input');
+  if (input) {
+    input.value = window.location.href;
+  }
+  document.getElementById('share-modal').classList.add('active');
+}
+
+function closeShareModal() {
+  document.getElementById('share-modal').classList.remove('active');
+}
+
+async function copyShareLink() {
+  const url = window.location.href;
+  try {
+    await navigator.clipboard.writeText(url);
+    const btn = document.getElementById('copy-share-btn');
+    const oldText = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('btn-success');
+    toast('📋 Link copied to clipboard!', 'ok');
+    setTimeout(() => {
+      btn.textContent = oldText;
+      btn.classList.remove('btn-success');
+    }, 2000);
+  } catch (err) {
+    toast('Failed to copy link: ' + err.message, 'err');
+  }
+}
+
+function shareSocial(platform) {
+  const url = encodeURIComponent(window.location.href);
+  const titleText = meetupData?.title || 'Meetup';
+  const text = encodeURIComponent(`Check out this community meetup on Converge: "${titleText}"!`);
+  let shareUrl = '';
+  
+  if (platform === 'whatsapp') {
+    shareUrl = `https://api.whatsapp.com/send?text=${text}%20${url}`;
+  } else if (platform === 'twitter') {
+    shareUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
+  } else if (platform === 'linkedin') {
+    shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+  }
+  
+  if (shareUrl) {
+    window.open(shareUrl, '_blank', 'noopener,noreferrer');
+  }
+}

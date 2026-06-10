@@ -40,7 +40,12 @@
 
       <!-- ── Left: Main content ── -->
       <div>
-        <h1 class="detail-title fade-up" id="m-title">Loading…</h1>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:1.2rem" class="fade-up">
+          <h1 class="detail-title" id="m-title" style="margin-bottom:0">Loading…</h1>
+          <button id="share-btn" class="btn btn-ghost btn-sm" style="display:inline-flex; align-items:center; gap:0.4rem; padding:0.4rem 0.75rem;" onclick="openShareModal()">
+            📤 Share
+          </button>
+        </div>
 
         <!-- Meta chips -->
         <div class="meta-row fade-up-1">
@@ -329,6 +334,39 @@
               <div class="barcode-line" style="width: 2%"></div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══ SHARE MODAL ════════════════════════════════════════ -->
+  <div class="modal-overlay" id="share-modal" onclick="if(event.target===this)closeShareModal()">
+    <div class="modal" style="max-width: 380px;">
+      <div class="modal-header">
+        <span class="modal-title">📤 Share this Event</span>
+        <button class="modal-close" onclick="closeShareModal()">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <p style="color:var(--txt2);font-size:.85rem;margin-bottom:1.25rem">
+          Spread the word! Share this meetup with your network.
+        </p>
+        
+        <div style="display:flex; gap:0.5rem; margin-bottom:1.25rem">
+          <input type="text" id="share-url-input" class="form-control" readonly style="flex:1; background:rgba(255,255,255,0.05); font-size:0.8rem;">
+          <button class="btn btn-primary" onclick="copyShareLink()" id="copy-share-btn">Copy</button>
+        </div>
+        
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.75rem;">
+          <button class="btn btn-outline" onclick="shareSocial('whatsapp')" style="display:flex; flex-direction:column; align-items:center; gap:0.35rem; padding:0.75rem 0; font-size:0.78rem; font-family:inherit;">
+            <span style="font-size:1.5rem">💬</span> WhatsApp
+          </button>
+          <button class="btn btn-outline" onclick="shareSocial('twitter')" style="display:flex; flex-direction:column; align-items:center; gap:0.35rem; padding:0.75rem 0; font-size:0.78rem; font-family:inherit;">
+            <span style="font-size:1.5rem">🐦</span> X / Twitter
+          </button>
+          <button class="btn btn-outline" onclick="shareSocial('linkedin')" style="display:flex; flex-direction:column; align-items:center; gap:0.35rem; padding:0.75rem 0; font-size:0.78rem; font-family:inherit;">
+            <span style="font-size:1.5rem">💼</span> LinkedIn
+          </button>
         </div>
       </div>
     </div>
