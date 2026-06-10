@@ -39,6 +39,12 @@ function getWindowInfo(meetup, settings) {
   return { open, closeAt: closeAt ? closeAt.toISOString() : null, adminSet: !!closeAt };
 }
 
+function getGraceWindowInfo(settings) {
+  const closeAt = settings?.disappearing_close_at ? new Date(settings.disappearing_close_at) : null;
+  const open    = closeAt ? new Date() < closeAt : false;
+  return { open, closeAt: closeAt ? closeAt.toISOString() : null, adminSet: !!closeAt };
+}
+
 /** Ensure scrapbook_settings row exists for a meetup (lazy init). */
 function ensureSettings(meetupId) {
   const row = db.prepare('SELECT * FROM scrapbook_settings WHERE meetup_id=?').get(meetupId);
@@ -55,11 +61,25 @@ function ensureSettings(meetupId) {
    Non-admins only see 'pending' and 'kept' items; 'removed' are hidden.
 ═══════════════════════════════════════════════════════════════════════════ */
 router.get('/:meetupId', auth, (req, res) => {
-  const meetup = db.prepare('SELECT * FROM meetups WHERE id=?').get(req.params.meetupId);
+  const meetup = db.prepare('SELECT id FROM meetups WHERE id=?').get(req.params.meetupId);
   if (!meetup) return res.status(404).json({ error: 'Meetup not found' });
+
+  /* ── Physical file & DB cleanup of expired removed items ── */
+  const nowISO = new Date().toISOString();
+  const expiredItems = db.prepare(`
+    SELECT id, file_path FROM scrapbook_items
+    WHERE meetup_id = ? AND status = 'removed' AND disappear_at <= ?
+  `).all(req.params.meetupId, nowISO);
+
+  expiredItems.forEach(item => {
+    const fullPath = path.join(__dirname, '../../../', item.file_path);
+    fs.unlink(fullPath, () => {}); /* best-effort file removal */
+    db.prepare('DELETE FROM scrapbook_items WHERE id = ?').run(item.id);
+  });
 
   const settings   = ensureSettings(req.params.meetupId);
   const windowInfo = getWindowInfo(meetup, settings);
+  const graceWindowInfo = getGraceWindowInfo(settings);
   const isAdmin    = req.user?.role === 'admin';
 
   const items = db.prepare(`
@@ -70,11 +90,16 @@ router.get('/:meetupId', auth, (req, res) => {
     ORDER BY s.uploaded_at DESC
   `).all(req.params.meetupId);
 
-  const filtered = isAdmin ? items : items.filter(i => i.status !== 'removed');
+  const filtered = isAdmin ? items : items.filter(i => {
+    if (i.status !== 'removed') return true;
+    if (i.disappear_at && new Date(i.disappear_at) > new Date()) return true;
+    return false;
+  });
 
   res.json({
     items:       filtered,
     windowInfo,
+    graceWindowInfo,
     settings,
     isAdmin
   });
@@ -146,8 +171,29 @@ router.patch('/:meetupId/items/:itemId', auth, adminOnly, (req, res) => {
     .get(req.params.itemId, req.params.meetupId);
   if (!item) return res.status(404).json({ error: 'Item not found' });
 
-  db.prepare('UPDATE scrapbook_items SET status=? WHERE id=?').run(status, req.params.itemId);
-  res.json({ ...item, status });
+  let disappear_at = null;
+  if (status === 'removed') {
+    const settings = ensureSettings(req.params.meetupId);
+    const graceClose = settings?.disappearing_close_at ? new Date(settings.disappearing_close_at) : null;
+    const isGraceOpen = graceClose ? new Date() < graceClose : false;
+
+    if (isGraceOpen) {
+      disappear_at = settings.disappearing_close_at;
+      db.prepare('UPDATE scrapbook_items SET status=?, disappear_at=? WHERE id=?')
+        .run(status, disappear_at, req.params.itemId);
+      return res.json({ ...item, status, disappear_at });
+    } else {
+      // Hard delete immediately!
+      const fullPath = path.join(__dirname, '../../../', item.file_path);
+      fs.unlink(fullPath, () => {}); /* best-effort file removal */
+      db.prepare('DELETE FROM scrapbook_items WHERE id=?').run(req.params.itemId);
+      return res.json({ ...item, status: 'deleted', deleted: true });
+    }
+  }
+
+  db.prepare('UPDATE scrapbook_items SET status=?, disappear_at=? WHERE id=?')
+    .run(status, null, req.params.itemId);
+  res.json({ ...item, status, disappear_at: null });
 });
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -189,10 +235,16 @@ router.put('/:meetupId/settings', auth, adminOnly, (req, res) => {
   }
 
   const enabled = req.body.enabled !== undefined ? (req.body.enabled ? 1 : 0) : 1;
+  let disappearingClose = null;
+  if (req.body.disappearing_close_at) {
+    const d = new Date(req.body.disappearing_close_at);
+    if (isNaN(d.getTime())) return res.status(400).json({ error: 'Invalid disappearing_close_at datetime' });
+    disappearingClose = d.toISOString();
+  }
 
   ensureSettings(req.params.meetupId);
-  db.prepare(`UPDATE scrapbook_settings SET upload_close_at=?, enabled=? WHERE meetup_id=?`)
-    .run(closeAt, enabled, req.params.meetupId);
+  db.prepare(`UPDATE scrapbook_settings SET upload_close_at=?, enabled=?, disappearing_close_at=? WHERE meetup_id=?`)
+    .run(closeAt, enabled, disappearingClose, req.params.meetupId);
 
   res.json(db.prepare('SELECT * FROM scrapbook_settings WHERE meetup_id=?').get(req.params.meetupId));
 });

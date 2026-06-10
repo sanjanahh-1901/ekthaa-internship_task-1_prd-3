@@ -37,7 +37,7 @@ router.put('/connections/:id/accept', auth, (req, res) => {
 // ── GET /api/networking/connections ──────────────────────────────────────────
 router.get('/connections', auth, (req, res) => {
   const conns = db.prepare(`
-    SELECT c.id, c.status, c.created_at,
+    SELECT c.id, c.status, c.created_at, c.requester_id,
            CASE WHEN c.requester_id=? THEN c.receiver_id ELSE c.requester_id END AS other_user_id,
            u.name, u.profession, u.company, u.profile_picture
     FROM connections c
@@ -58,6 +58,19 @@ router.post('/messages', auth, (req, res) => {
   ).run(req.user.id, receiver_id, content.trim());
 
   res.status(201).json(db.prepare('SELECT * FROM messages WHERE id=?').get(result.lastInsertRowid));
+});
+
+// ── GET /api/networking/recent-messages ──────────────────────────────────────
+router.get('/recent-messages', auth, (req, res) => {
+  const messages = db.prepare(`
+    SELECT m.*, s.name AS sender_name, s.profile_picture AS sender_picture
+    FROM messages m
+    JOIN users s ON m.sender_id=s.id
+    WHERE m.receiver_id = ?
+    ORDER BY m.sent_at DESC
+    LIMIT 30
+  `).all(req.user.id);
+  res.json(messages);
 });
 
 // ── GET /api/networking/messages/:userId ──────────────────────────────────────

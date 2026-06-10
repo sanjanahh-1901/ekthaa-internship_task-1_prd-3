@@ -80,6 +80,7 @@ db.exec(`
     company           TEXT,
     profile_picture   TEXT,
     looking_for       TEXT,
+    public_key        TEXT,
     created_at        DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -156,10 +157,11 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS scrapbook_settings (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    meetup_id        INTEGER NOT NULL UNIQUE,
-    upload_close_at  TEXT,
-    enabled          INTEGER NOT NULL DEFAULT 1,
+    id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+    meetup_id                   INTEGER NOT NULL UNIQUE,
+    upload_close_at             TEXT,
+    enabled                     INTEGER NOT NULL DEFAULT 1,
+    disappearing_close_at       TEXT,
     FOREIGN KEY (meetup_id) REFERENCES meetups(id)
   );
 
@@ -171,6 +173,7 @@ db.exec(`
     media_type   TEXT NOT NULL DEFAULT 'photo',
     caption      TEXT,
     status       TEXT NOT NULL DEFAULT 'pending',
+    disappear_at TEXT,
     uploaded_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (meetup_id)   REFERENCES meetups(id),
     FOREIGN KEY (uploader_id) REFERENCES users(id)
@@ -179,6 +182,9 @@ db.exec(`
 
 /* ─── Live migration: add upload_close_at if upgrading from old schema ─── */
 try { db.exec('ALTER TABLE scrapbook_settings ADD COLUMN upload_close_at TEXT'); } catch {}
+try { db.exec('ALTER TABLE scrapbook_settings ADD COLUMN disappearing_close_at TEXT'); } catch {}
+try { db.exec('ALTER TABLE scrapbook_items ADD COLUMN disappear_at TEXT'); } catch {}
+try { db.exec('ALTER TABLE users ADD COLUMN public_key TEXT'); } catch {}
 /* Remove legacy column if present (SQLite ≥3.35 only, safe no-op otherwise) */
 try { db.exec('ALTER TABLE scrapbook_settings DROP COLUMN upload_window_hours'); } catch {}
 

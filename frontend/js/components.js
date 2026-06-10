@@ -326,6 +326,190 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════
+     3.  N O T I F I C A T I O N S
+  ══════════════════════════════════════════════════════════════════════════════ */
+  let dismissedTime = parseInt(localStorage.getItem('meetup-notif-dismissed') || '0');
+
+  window.dismissAllNotifications = function() {
+    localStorage.setItem('meetup-notif-dismissed', Date.now().toString());
+    dismissedTime = Date.now();
+    loadNotifications();
+    if (typeof toast === 'function') toast('🔔 Notifications cleared', 'info');
+  };
+
+  window.acceptNotificationConnection = async function(connId) {
+    try {
+      await apiFetch(`/networking/connections/${connId}/accept`, { method: 'PUT' });
+      if (typeof toast === 'function') toast('🤝 Connection request accepted!', 'ok');
+      await loadNotifications();
+      if (typeof reload === 'function') {
+        await reload();
+      }
+    } catch (err) {
+      if (typeof toast === 'function') toast(err.message, 'err');
+    }
+  };
+
+  window.goToChat = async function(senderId) {
+    try {
+      const meetups = await apiFetch('/meetups');
+      const me = AppState.getUser();
+      // Find the first meetup where the user is registered
+      const shared = meetups.find(m => {
+        return m.registered_members?.some(r => r.id === me.id);
+      });
+      const meetupId = shared ? shared.id : 2;
+      window.location.href = `/meetup.html?id=${meetupId}&openChat=${senderId}`;
+    } catch (err) {
+      window.location.href = `/meetup.html?id=2&openChat=${senderId}`;
+    }
+  };
+
+  async function loadNotifications() {
+    const badge = document.getElementById('notifications-badge');
+    const list = document.getElementById('notifications-list');
+    if (!badge || !list) return;
+
+    try {
+      const me = AppState.getUser();
+      if (!me) return;
+
+      const [connections, messages] = await Promise.all([
+        apiFetch('/networking/connections').catch(() => []),
+        apiFetch('/networking/recent-messages').catch(() => [])
+      ]);
+
+      const pendingRequests = connections.filter(c => c.status === 'pending' && c.requester_id !== me.id);
+      
+      const incomingMessages = messages.filter(m => {
+        if (m.sender_id === me.id) return false;
+        if (m.content.includes('"isSignal":true')) return false;
+
+        let ts = m.sent_at;
+        if (ts && !ts.endsWith('Z') && !ts.includes('+')) ts = ts.replace(' ', 'T') + 'Z';
+        const msgTime = new Date(ts).getTime();
+        return msgTime > dismissedTime;
+      });
+
+      const totalCount = pendingRequests.length + incomingMessages.length;
+
+      if (totalCount > 0) {
+        badge.style.display = 'flex';
+        badge.textContent = totalCount;
+      } else {
+        badge.style.display = 'none';
+      }
+
+      if (totalCount === 0) {
+        list.innerHTML = `<div style="text-align:center; padding:1.5rem; color:var(--txt3); font-size:0.85rem;">🔔 No new notifications</div>`;
+        return;
+      }
+
+      let html = '';
+
+      for (const r of pendingRequests) {
+        html += `
+          <div class="notification-item" style="padding:0.6rem 0.8rem; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:0.4rem; transition: background 0.2s;">
+            <div style="font-size:0.82rem; color:#fff; line-height:1.4;">
+              🤝 <strong>${esc(r.name)}</strong> wants to connect.
+            </div>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); acceptNotificationConnection(${r.id})" style="padding:0.2rem 0.5rem; font-size:0.75rem;">Accept</button>
+            </div>
+          </div>
+        `;
+      }
+
+      for (const m of incomingMessages) {
+        let displayContent = 'Sent you a message.';
+        if (m.content.includes('"isEncrypted":true')) {
+          displayContent = '🔒 Encrypted message received.';
+        } else {
+          displayContent = m.content.length > 40 ? m.content.slice(0, 40) + '...' : m.content;
+        }
+
+        html += `
+          <div class="notification-item" style="padding:0.6rem 0.8rem; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:0.2rem; cursor:pointer;" onclick="goToChat(${m.sender_id})">
+            <div style="font-size:0.82rem; color:#fff; line-height:1.4;">
+              💬 New message from <strong>${esc(m.sender_name)}</strong>
+            </div>
+            <div style="font-size:0.75rem; color:var(--txt3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              ${esc(displayContent)}
+            </div>
+          </div>
+        `;
+      }
+
+      list.innerHTML = html;
+    } catch (err) {
+      console.warn('Failed to load notifications:', err);
+    }
+  }
+
+  function injectNotificationsButton() {
+    const navRight = document.querySelector('.navbar-right');
+    if (!navRight || document.getElementById('notifications-wrapper')) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.id = 'notifications-wrapper';
+    wrapper.style.cssText = 'position:relative; display:inline-block; flex-shrink:0;';
+
+    wrapper.innerHTML = `
+      <button id="notifications-btn" class="btn btn-ghost btn-sm" style="width:36px;height:36px;padding:0;font-size:1rem;border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative" title="Notifications">
+        🔔
+        <span id="notifications-badge" style="display:none;position:absolute;top:2px;right:2px;min-width:14px;height:14px;background:var(--err);color:#fff;border-radius:50%;font-size:0.65rem;display:flex;align-items:center;justify-content:center;font-weight:bold;padding:1px;box-shadow:0 0 6px var(--err)"></span>
+      </button>
+      <div id="notifications-dropdown" class="notifications-dropdown-menu" style="display:none; position:absolute; right:0; top:42px; width:300px; background: rgba(8, 8, 17, 0.95); backdrop-filter: blur(24px); border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--sh-lg); z-index: 1000; padding: 0.5rem 0;">
+        <div style="font-size:0.75rem; font-weight:700; color:var(--txt3); padding:0.4rem 0.8rem; border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:0.05em; display:flex; justify-content:space-between; align-items:center;">
+          <span>Notifications</span>
+          <button id="notif-clear-btn" style="background:transparent; border:none; color:var(--a1); font-size:0.7rem; cursor:pointer; font-weight:600; padding:0;">Dismiss All</button>
+        </div>
+        <div id="notifications-list" style="max-height: 250px; overflow-y: auto;">
+          <div style="text-align:center; padding:1.5rem; color:var(--txt3); font-size:0.85rem;">🔔 Loading notifications...</div>
+        </div>
+      </div>
+    `;
+
+    const themeBtn = document.getElementById('theme-toggle-btn');
+    if (themeBtn) {
+      navRight.insertBefore(wrapper, themeBtn);
+    } else {
+      const userEl = document.getElementById('nav-user');
+      navRight.insertBefore(wrapper, userEl || navRight.firstChild);
+    }
+
+    const btn = wrapper.querySelector('#notifications-btn');
+    const dropdown = wrapper.querySelector('#notifications-dropdown');
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const isVisible = dropdown.classList.contains('show');
+      if (isVisible) {
+        dropdown.classList.remove('show');
+        setTimeout(() => { dropdown.style.display = 'none'; }, 200);
+      } else {
+        dropdown.style.display = 'block';
+        setTimeout(() => { dropdown.classList.add('show'); }, 10);
+        loadNotifications();
+      }
+    };
+
+    const clearBtn = wrapper.querySelector('#notif-clear-btn');
+    clearBtn.onclick = (e) => {
+      e.stopPropagation();
+      dismissAllNotifications();
+    };
+  }
+
+  document.addEventListener('click', (e) => {
+    const wrap = document.getElementById('notifications-wrapper');
+    const dropdown = document.getElementById('notifications-dropdown');
+    if (wrap && dropdown && dropdown.classList.contains('show') && !wrap.contains(e.target)) {
+      dropdown.classList.remove('show');
+      setTimeout(() => { dropdown.style.display = 'none'; }, 200);
+    }
+  });
+
+  /* ═══════════════════════════════════════════════════════════════════════════
      INIT  (runs after DOM is ready)
   ══════════════════════════════════════════════════════════════════════════════ */
   function init() {
@@ -335,9 +519,15 @@
     /* 2. Inject theme button into navbar */
     injectThemeButton();
 
-    /* 3. Inject chatbot (logged-in users only) */
+    /* 3. Inject chatbot and notifications (logged-in users only) */
     const loggedIn = (typeof AppState !== 'undefined') && AppState.isLoggedIn();
-    if (loggedIn) injectChatbot();
+    if (loggedIn) {
+      injectChatbot();
+      injectNotificationsButton();
+      loadNotifications().catch(err => console.error(err));
+      // Poll notifications every 10 seconds
+      setInterval(loadNotifications, 10000);
+    }
   }
 
   if (document.readyState === 'loading') {

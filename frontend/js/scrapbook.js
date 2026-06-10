@@ -8,6 +8,7 @@
 let sbData         = null;   // { items, windowInfo, settings, isAdmin }
 let sbSelectedFile = null;   // File object from drop/pick
 let sbCountdownTimer  = null;// setInterval handle
+let sbActiveTab       = 'photos'; // 'photos' | 'videos'
 
 /* ══════════════════════════════════════════════════════════════
    Entry point — called by meetup.js after meetupData is ready
@@ -69,17 +70,35 @@ function renderScrapbookBody() {
       const tzOffset = d.getTimezoneOffset() * 60000;
       currentClose = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
     }
+    let currentGraceClose = '';
+    if (sbData.settings?.disappearing_close_at) {
+      const d = new Date(sbData.settings.disappearing_close_at);
+      const tzOffset = d.getTimezoneOffset() * 60000;
+      currentGraceClose = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+    }
     html += `
-      <div class="scrapbook-settings-row">
-        <label>⏰ Upload window closes at:</label>
-        <input type="datetime-local" id="sb-close-input" class="scrapbook-window-select"
-               value="${currentClose}"
-               style="padding:.35rem .6rem;border-radius:var(--r-sm)">
-        <button class="btn btn-primary btn-sm" onclick="saveScrapbookSettings()">Set Window</button>
-        ${sbData.settings?.upload_close_at
-          ? `<button class="btn btn-ghost btn-sm" onclick="clearScrapbookWindow()" title="Remove window — disables uploads">✕ Clear</button>`
-          : ''}
-        <span style="font-size:.72rem;color:var(--txt3)">${items.length} item${items.length !== 1 ? 's' : ''}</span>
+      <div class="scrapbook-settings-row" style="display:flex;flex-direction:column;gap:.6rem;align-items:stretch">
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+          <label style="margin:0">⏰ Upload window closes at:</label>
+          <input type="datetime-local" id="sb-close-input" class="scrapbook-window-select"
+                 value="${currentClose}"
+                 style="padding:.35rem .6rem;border-radius:var(--r-sm)">
+          <button class="btn btn-primary btn-sm" onclick="saveScrapbookSettings()">Set Window</button>
+          ${sbData.settings?.upload_close_at
+            ? `<button class="btn btn-ghost btn-sm" onclick="clearScrapbookWindow()" title="Remove window — disables uploads">✕ Clear</button>`
+            : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,0.05);padding-top:.6rem">
+          <label style="margin:0">⏳ Grace period window closes at:</label>
+          <input type="datetime-local" id="sb-grace-close-input" class="scrapbook-window-select"
+                 value="${currentGraceClose}"
+                 style="padding:.35rem .6rem;border-radius:var(--r-sm)">
+          <button class="btn btn-primary btn-sm" onclick="saveGracePeriodWindow()">Set Grace Window</button>
+          ${sbData.settings?.disappearing_close_at
+            ? `<button class="btn btn-ghost btn-sm" onclick="clearGracePeriodWindow()" title="Remove grace window — immediately deletes removed items">✕ Clear</button>`
+            : ''}
+          <span style="font-size:.72rem;color:var(--txt3);margin-left:auto">${items.length} item${items.length !== 1 ? 's' : ''}</span>
+        </div>
       </div>`;
   }
 
@@ -92,6 +111,20 @@ function renderScrapbookBody() {
       <span class="cd-num" id="sb-cd-m">--</span>
       <span class="cd-colon">m</span>
       <span class="cd-num" id="sb-cd-s">--</span>
+      <span class="cd-colon">s</span>
+    </div>`;
+  }
+
+  /* ── Grace Period Countdown ── (shown while grace window is open) */
+  const graceWindow = sbData.graceWindowInfo;
+  if (graceWindow && graceWindow.open && graceWindow.adminSet) {
+    html += `<div class="scrapbook-countdown grace-countdown" id="sb-grace-countdown" style="margin-top:.5rem;background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.15)">
+      <span style="color:var(--txt3)">⏳ Removed media disappears in</span>
+      <span class="cd-num" id="sb-grace-cd-h">--</span>
+      <span class="cd-colon">h</span>
+      <span class="cd-num" id="sb-grace-cd-m">--</span>
+      <span class="cd-colon">m</span>
+      <span class="cd-num" id="sb-grace-cd-s">--</span>
       <span class="cd-colon">s</span>
     </div>`;
   }
@@ -144,7 +177,11 @@ function renderScrapbookBody() {
   }
 
   /* ── Gallery ── */
-  const visible = isAdmin ? items : items.filter(i => i.status !== 'removed');
+  const visible = isAdmin ? items : items.filter(i => {
+    if (i.status !== 'removed') return true;
+    if (i.disappear_at && new Date(i.disappear_at) > new Date()) return true;
+    return false;
+  });
   if (!visible.length) {
     html += `
       <div class="scrapbook-empty">
@@ -153,13 +190,67 @@ function renderScrapbookBody() {
         <div class="scrapbook-empty-sub">${open ? 'Be the first to add a photo or video!' : 'The upload window has closed.'}</div>
       </div>`;
   } else {
-    html += `<div class="scrapbook-grid" id="sb-grid">` + visible.map(item => sbTileHTML(item, isAdmin)).join('') + `</div>`;
+    const photos = visible.filter(i => i.media_type !== 'video');
+    const videos = visible.filter(i => i.media_type === 'video');
+
+    // Side-by-side subheader tabs
+    html += `
+      <div class="scrapbook-tabs">
+        <div class="scrapbook-tab ${sbActiveTab === 'photos' ? 'active' : ''}" onclick="switchScrapbookTab('photos')">
+          📸 Photos (${photos.length})
+        </div>
+        <div class="scrapbook-tab ${sbActiveTab === 'videos' ? 'active' : ''}" onclick="switchScrapbookTab('videos')">
+          🎥 Videos (${videos.length})
+        </div>
+      </div>
+    `;
+
+    // Photos Container
+    html += `<div id="sb-photos-container" class="sb-tab-content" style="display: ${sbActiveTab === 'photos' ? 'block' : 'none'}">`;
+    if (photos.length === 0) {
+      html += `<div class="scrapbook-section-empty">No photos shared yet.</div>`;
+    } else {
+      html += `<div class="scrapbook-grid" id="sb-photos-grid">` + photos.map(item => sbTileHTML(item, isAdmin)).join('') + `</div>`;
+    }
+    html += `</div>`;
+
+    // Videos Container
+    html += `<div id="sb-videos-container" class="sb-tab-content" style="display: ${sbActiveTab === 'videos' ? 'block' : 'none'}">`;
+    if (videos.length === 0) {
+      html += `<div class="scrapbook-section-empty">No videos shared yet.</div>`;
+    } else {
+      html += `<div class="scrapbook-grid" id="sb-videos-grid">` + videos.map(item => sbTileHTML(item, isAdmin)).join('') + `</div>`;
+    }
+    html += `</div>`;
   }
 
   body.innerHTML = html;
 
-  /* Start countdown if window is open */
-  if (open) startWindowCountdown(closeAt);
+  /* Start countdowns if windows are open */
+  startWindowCountdowns(
+    open && windowInfo.adminSet ? closeAt : null,
+    graceWindow && graceWindow.open && graceWindow.adminSet ? graceWindow.closeAt : null
+  );
+
+  /* Start individual tile countdowns if there are disappearing items */
+  startTileCountdowns();
+}
+
+function switchScrapbookTab(tab) {
+  if (tab !== 'photos' && tab !== 'videos') return;
+  sbActiveTab = tab;
+
+  // Toggle active tab header classes
+  const tabs = document.querySelectorAll('.scrapbook-tab');
+  tabs.forEach(t => t.classList.remove('active'));
+  const activeIdx = tab === 'photos' ? 0 : 1;
+  if (tabs[activeIdx]) tabs[activeIdx].classList.add('active');
+
+  // Toggle grid container visibility
+  const photosCont = document.getElementById('sb-photos-container');
+  const videosCont = document.getElementById('sb-videos-container');
+  if (photosCont) photosCont.style.display = tab === 'photos' ? 'block' : 'none';
+  if (videosCont) videosCont.style.display = tab === 'videos' ? 'block' : 'none';
 }
 
 /* ── Single tile HTML ────────────────────────────────────────── */
@@ -198,6 +289,13 @@ function sbTileHTML(item, isAdmin) {
   const ribbon = (isAdmin && item.status !== 'pending') ? `
     <span class="scrapbook-status-ribbon ${item.status}">${item.status === 'kept' ? '✓ Kept' : '✗ Removed'}</span>` : '';
 
+  const isDisappearing = item.status === 'removed' && item.disappear_at && new Date(item.disappear_at) > new Date();
+  let disappearBadge = '';
+  if (isDisappearing) {
+    const adminClass = isAdmin ? 'admin-disappear' : '';
+    disappearBadge = `<span class="scrapbook-disappear-badge ${adminClass}" data-disappear-at="${item.disappear_at}">⏳ --</span>`;
+  }
+
   return `
     <div class="scrapbook-tile ${isSticker ? 'sticker-tile' : ''} ${isVideo ? 'video-tile' : ''} ${isRemoved ? 'removed-tile' : ''}"
          onclick="openScrapbookPreview(${item.id})"
@@ -206,6 +304,7 @@ function sbTileHTML(item, isAdmin) {
       ${overlay}
       ${adminActions}
       ${ribbon}
+      ${disappearBadge}
     </div>`;
 }
 
@@ -261,12 +360,23 @@ async function submitScrapbookUpload() {
    ADMIN CURATION
 ═══════════════════════════════════════════════════════════════ */
 async function adminCurateItem(itemId, status) {
+  if (status === 'removed') {
+    const graceWindow = sbData.graceWindowInfo;
+    const confirmMsg = graceWindow && graceWindow.open
+      ? `Remove this item? Standard attendees will still see it until the grace period window closes (${new Date(graceWindow.closeAt).toLocaleString()}).`
+      : 'Remove this item? It will be permanently deleted from everywhere immediately.';
+    if (!confirm(confirmMsg)) return;
+  }
   try {
-    await apiFetch(`/scrapbook/${meetupId}/items/${itemId}`, {
+    const res = await apiFetch(`/scrapbook/${meetupId}/items/${itemId}`, {
       method: 'PATCH',
       body: JSON.stringify({ status })
     });
-    toast(status === 'kept' ? '✅ Item marked as kept' : '🗑 Item removed', status === 'kept' ? 'ok' : 'info');
+    if (res.deleted) {
+      toast('🗑 Item permanently deleted from everywhere', 'info');
+    } else {
+      toast(status === 'kept' ? '✅ Item marked as kept' : '🗑 Item marked as removed', status === 'kept' ? 'ok' : 'info');
+    }
     await loadScrapbook();
   } catch (err) { toast(err.message, 'err'); }
 }
@@ -278,7 +388,10 @@ async function saveScrapbookSettings() {
   try {
     await apiFetch(`/scrapbook/${meetupId}/settings`, {
       method: 'PUT',
-      body: JSON.stringify({ upload_close_at: closeAt })
+      body: JSON.stringify({
+        upload_close_at: closeAt,
+        disappearing_close_at: sbData.settings?.disappearing_close_at || null
+      })
     });
     toast('⏰ Upload window saved!', 'ok');
     await loadScrapbook();
@@ -290,9 +403,44 @@ async function clearScrapbookWindow() {
   try {
     await apiFetch(`/scrapbook/${meetupId}/settings`, {
       method: 'PUT',
-      body: JSON.stringify({ upload_close_at: null })
+      body: JSON.stringify({
+        upload_close_at: null,
+        disappearing_close_at: sbData.settings?.disappearing_close_at || null
+      })
     });
     toast('Upload window cleared.', 'info');
+    await loadScrapbook();
+  } catch (err) { toast(err.message, 'err'); }
+}
+
+async function saveGracePeriodWindow() {
+  const input = document.getElementById('sb-grace-close-input');
+  if (!input || !input.value) { toast('Please pick a date & time first.', 'err'); return; }
+  const closeAt = new Date(input.value).toISOString();
+  try {
+    await apiFetch(`/scrapbook/${meetupId}/settings`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        upload_close_at: sbData.settings?.upload_close_at || null,
+        disappearing_close_at: closeAt
+      })
+    });
+    toast('⏳ Grace period window saved!', 'ok');
+    await loadScrapbook();
+  } catch (err) { toast(err.message, 'err'); }
+}
+
+async function clearGracePeriodWindow() {
+  if (!confirm('Clear grace window? Removed media will be deleted immediately.')) return;
+  try {
+    await apiFetch(`/scrapbook/${meetupId}/settings`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        upload_close_at: sbData.settings?.upload_close_at || null,
+        disappearing_close_at: null
+      })
+    });
+    toast('Grace window cleared.', 'info');
     await loadScrapbook();
   } catch (err) { toast(err.message, 'err'); }
 }
@@ -352,28 +500,95 @@ document.addEventListener('keydown', e => {
 /* ══════════════════════════════════════════════════════════════
    COUNTDOWN TIMER
 ═══════════════════════════════════════════════════════════════ */
-function startWindowCountdown(closeAtISO) {
-  if (sbCountdownTimer) clearInterval(sbCountdownTimer);
+function startWindowCountdowns(closeAtISO, graceCloseAtISO) {
+  if (window.sbCountdownsInterval) clearInterval(window.sbCountdownsInterval);
+
   const tick = () => {
-    const diff = new Date(closeAtISO) - new Date();
-    if (diff <= 0) {
-      clearInterval(sbCountdownTimer);
+    const now = new Date();
+
+    // 1. Upload Close countdown
+    if (closeAtISO) {
+      const diff = new Date(closeAtISO) - now;
       const cd = document.getElementById('sb-countdown');
-      if (cd) cd.innerHTML = '<span style="color:var(--err)">Upload window has closed</span>';
-      renderScrapbookBadge();
+      if (diff <= 0) {
+        if (cd) cd.innerHTML = '<span style="color:var(--err)">Upload window has closed</span>';
+        renderScrapbookBadge();
+      } else {
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        const pad = n => String(n).padStart(2, '0');
+        const hEl = document.getElementById('sb-cd-h');
+        const mEl = document.getElementById('sb-cd-m');
+        const sEl = document.getElementById('sb-cd-s');
+        if (hEl) hEl.textContent = pad(h);
+        if (mEl) mEl.textContent = pad(m);
+        if (sEl) sEl.textContent = pad(s);
+      }
+    }
+
+    // 2. Grace Period Close countdown
+    if (graceCloseAtISO) {
+      const diff = new Date(graceCloseAtISO) - now;
+      const gcd = document.getElementById('sb-grace-countdown');
+      if (diff <= 0) {
+        if (gcd) gcd.innerHTML = '<span style="color:var(--err)">Grace window has expired</span>';
+      } else {
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        const pad = n => String(n).padStart(2, '0');
+        const hEl = document.getElementById('sb-grace-cd-h');
+        const mEl = document.getElementById('sb-grace-cd-m');
+        const sEl = document.getElementById('sb-grace-cd-s');
+        if (hEl) hEl.textContent = pad(h);
+        if (mEl) mEl.textContent = pad(m);
+        if (sEl) sEl.textContent = pad(s);
+      }
+    }
+  };
+
+  tick();
+  window.sbCountdownsInterval = setInterval(tick, 1000);
+}
+
+
+
+function startTileCountdowns() {
+  if (window.sbTileCountdownInterval) clearInterval(window.sbTileCountdownInterval);
+
+  const updateCountdowns = () => {
+    const badges = document.querySelectorAll('.scrapbook-disappear-badge');
+    if (badges.length === 0) {
+      clearInterval(window.sbTileCountdownInterval);
+      window.sbTileCountdownInterval = null;
       return;
     }
-    const h = Math.floor(diff / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
-    const pad = n => String(n).padStart(2, '0');
-    const hEl = document.getElementById('sb-cd-h');
-    const mEl = document.getElementById('sb-cd-m');
-    const sEl = document.getElementById('sb-cd-s');
-    if (hEl) hEl.textContent = pad(h);
-    if (mEl) mEl.textContent = pad(m);
-    if (sEl) sEl.textContent = pad(s);
+
+    const now = new Date();
+    let expiredAny = false;
+    badges.forEach(badge => {
+      const disappearAtStr = badge.getAttribute('data-disappear-at');
+      if (!disappearAtStr) return;
+      const disappearAt = new Date(disappearAtStr);
+      const diff = disappearAt - now;
+
+      if (diff <= 0) {
+        badge.textContent = 'Expired';
+        expiredAny = true;
+      } else {
+        const mins = Math.floor(diff / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        badge.textContent = `⏳ ${mins}m ${secs}s left`;
+      }
+    });
+
+    if (expiredAny) {
+      // Refresh the page data if any timer has run out
+      loadScrapbook();
+    }
   };
-  tick();
-  sbCountdownTimer = setInterval(tick, 1000);
+
+  updateCountdowns();
+  window.sbTileCountdownInterval = setInterval(updateCountdowns, 1000);
 }
