@@ -893,7 +893,13 @@ async function openScanner() {
         );
         scannerActive = true;
       } catch (err) {
-        toast('Camera start failed: ' + err.message, 'err');
+        let msg = err.message || String(err);
+        if (err.name === 'NotAllowedError' || msg.includes('Permission denied') || msg.includes('PermissionDismissedError') || msg.includes('NotAllowedError')) {
+          msg = 'Camera access denied. Please grant camera permission in your browser settings, and make sure you are accessing the app via http://localhost:3000.';
+        } else {
+          msg = 'Camera start failed: ' + msg;
+        }
+        toast('📷 ' + msg, 'err');
       }
     };
     
@@ -909,7 +915,15 @@ async function openScanner() {
     };
     
   } catch (err) {
-    toast(err.message, 'err');
+    let msg = err.message || String(err);
+    if (err.name === 'NotAllowedError' || msg.includes('Permission denied') || msg.includes('PermissionDismissedError') || msg.includes('NotAllowedError')) {
+      msg = '📷 Camera access denied. Please grant camera permission in your browser or address bar settings, and ensure you are using http://localhost:3000 (browsers block camera access on non-localhost HTTP).';
+    } else if (err.name === 'NotFoundError' || msg.includes('Requested device not found')) {
+      msg = '📷 No camera found on this device. Please connect or enable a webcam.';
+    } else if (err.name === 'NotReadableError' || msg.includes('Could not start video source')) {
+      msg = '📷 Camera is already in use by another tab or application. Please close it and try again.';
+    }
+    toast(msg, 'err');
     closeScanner();
   }
 }
